@@ -6,10 +6,10 @@ func : main NEWLINE*
      | (calledfunc NEWLINE*)+
      ;
 
-main : 'Main' '(' locvars ')'NEWLINE*'{' NEWLINE*stmt '}';
+main : 'main' '(' locvars ')'NEWLINE*'{' NEWLINE*stmt '}';
 
-calledfunc : funcid '(' lexpr',' aexpr ')'NEWLINE* '{' NEWLINE*stmt '}'
-           | funcid '(' lexpr ')'NEWLINE* '{'NEWLINE* stmt '}'
+calledfunc : funcid '(' lexpr',' aexpr ')'NEWLINE* '{' NEWLINE*stmt '}'                                #calledfuncwithaexpr
+           | funcid '(' lexpr ')'NEWLINE* '{'NEWLINE* stmt '}'                                         #calledfuncnoaexpr
            ;
            
 stmt : ( block SEMICOLON NEWLINE?)+ 
@@ -24,13 +24,13 @@ block : funccall+
 
 ifstmt : 'if' '(' bexpr ')' NEWLINE*stmt 'else' NEWLINE*stmt ;
 
-funccall : intvars'='funcid'('lexpr','aexpr')'
-         | intvars'='funcid'('lexpr')' 
+funccall : intvars'='funcid'('lexpr','aexpr')'                                                      #funccallwithaexpr
+         | intvars'='funcid'('lexpr')'                                                              #funccallnoaexpr
          ;
 
 assgn : locvars'.'intvars'='aexpr
       | intvars'='aexpr
-      | 'return' returnexpr
+      | 'return' rtnexpr
       ;
       
 lexpr : locvars
@@ -53,16 +53,14 @@ aexpr : '0'
 
 locvars : ID;
 
-returnexpr : intvars
-           | '('intvars')'
-           | '('intvars','intvars')'
-           | '0'
-           ;
-
-intvars : intvars'+'intvars
-        | intvars'+'INT
+rtnexpr : '0' 
+        | '1'
+        | rtnexpr ('+'|'-') rtnexpr
+        | intvars
+        ;
+        
+intvars : INT
         | ID
-        | INT
         ;
         
 funcid : ID ;
@@ -72,4 +70,4 @@ ID : [a-zA-Z]+;
 NEWLINE : '\r'? '\n';
 WS : [ \t]+ ->skip;
 SEMICOLON : ';';
-
+HH : [\r\n]+ ->skip;
