@@ -32,36 +32,36 @@ public class Test {
 		ParseTreeWalker walker = new ParseTreeWalker();
 		walker.walk(new Info(), tree);
 
-		/* show AllFuncs、AllParams、AllBlocks、AllCalls、AllNoCalls */
-		System.out.println("\n<---- 1. AllFuncs " + Info.funcs_count + " ---->");
+		/* using Listener to show AllFuncs、AllParams、AllBlocks、AllCalls、AllNoCalls */
+		System.out.println("\n<---- 1. AllFuncs " + Info.funcs_count + "   ---->");
 		for (int i = 0; i < Info.allfuncs.length; i++) {
 			if (Info.allfuncs[i] != null) {
-				System.out.println("function " + (i + 1) + ": " + Info.allfuncs[i]);
+				System.out.println("Function " + (i + 1) + ": " + Info.allfuncs[i]);
 			} else
 				break;
 		}
-		System.out.println("\n<---- 2. AllParams " + Info.params_count + " ---->");
+		System.out.println("\n<---- 2. AllParams " + Info.params_count + "   ---->");
 		for (int i = 0; i < Info.allparams.length; i++) {
 			if (Info.allparams[i] != null) {
 				System.out.println("Function Parameter " + (i + 1) + ": " + Info.allparams[i]);
 			} else
 				break;
 		}
-		System.out.println("\n<---- 3. AllBlocks " + Info.blocks_count + " ---->");
+		System.out.println("\n<---- 3. AllBlocks " + Info.blocks_count + "   ---->");
 		for (int i = 0; i < Info.allblocks.length; i++) {
 			if (Info.allblocks[i] != null) {
 				System.out.println("Block " + (i + 1) + ": " + Info.allblocks[i]);
 			} else
 				break;
 		}
-		System.out.println("\n<---- 4. AllCalls " + Info.calls_count + " ---->");
+		System.out.println("\n<---- 4. AllCalls " + Info.calls_count + "   ---->");
 		for (int i = 0; i < Info.allcalls.length; i++) {
 			if (Info.allcalls[i] != null) {
 				System.out.println("Call " + (i + 1) + ": " + Info.allcalls[i]);
 			} else
 				break;
 		}
-		System.out.println("\n<---- 5. AllNoCalls " + Info.assigns_count + " ---->");
+		System.out.println("\n<---- 5. AllNoCalls " + Info.assigns_count + "   ---->");
 		for (int i = 0; i < Info.allnocalls.length; i++) {
 			if (Info.allnocalls[i] != null) {
 				System.out.println("NoCall block " + (i + 1) + ": " + Info.allnocalls[i]);
@@ -70,12 +70,16 @@ public class Test {
 		}
 		
 		//启动visitor
-		System.out.println("\n<---- 6. AllNoCalls  ---->");
+		System.out.println("\n<----   6. Blocks(f)   ---->");	
 		Info2 info_f=new Info2();
 		String result= info_f.visit(tree);
 		
+		System.out.println("\n<----   7. Params(f)    ---->");	
+		Params param=new Params();
+		String result2= param.visit(tree);
 		
-		System.out.println("\n<---- 8. Nodes in the Tree  ---->");
+		
+		System.out.println("\n<----   8. Nodes(T)     ---->");
 		Nodes nodes=new Nodes();
 		String node_ressult= nodes.visit(tree);
 	}
@@ -95,7 +99,7 @@ public class Test {
 			in.read(filecontent);
 			in.close();
 		} catch (FileNotFoundException e) {
-			e.prin/tStackTrace();
+			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
