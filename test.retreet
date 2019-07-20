@@ -1,10 +1,10 @@
-Main(n)
+main(n)
 {
 o=odd(n);
 e=even(m);
 }
 
-odd(n)
+odd(n,a)
 {
   if(true){
      return 23;
@@ -17,7 +17,7 @@ odd(n)
   
 }
 
-even(n){
+even(m){
  if (n==nil)
    return 0;
  else {
