@@ -22,7 +22,11 @@ block : funccall+
       | assgn+ 
       ;
 
-ifstmt : 'if' '(' bexpr ')' NEWLINE*stmt 'else' NEWLINE*stmt ;
+ifstmt :ifpart NEWLINE* elsepart;
+
+ifpart : 'if''(' bexpr ')'NEWLINE*stmt;
+
+elsepart : 'else' NEWLINE* stmt;
 
 funccall : intvars'='funcid'('lexpr','aexpr')'                                                      #funccallwithaexpr
          | intvars'='funcid'('lexpr')'                                                              #funccallnoaexpr
