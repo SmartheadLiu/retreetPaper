@@ -2,50 +2,47 @@ grammar retreet;
 
 prog : func+ ;                                  
 
-func : main NEWLINE*
-     | (calledfunc NEWLINE*)+
+func : main 
+     | calledfunc+
      ;
 
-main : 'main' '(' locvars ')'NEWLINE*'{' NEWLINE*stmt '}';
+main : 'main' '(' locvars ')''{' stmt '}';
 
-calledfunc : funcid '(' lexpr',' aexpr ')'NEWLINE* '{' NEWLINE*stmt '}'                                #calledfuncwithaexpr
-           | funcid '(' lexpr ')'NEWLINE* '{'NEWLINE* stmt '}'                                         #calledfuncnoaexpr
-           ;
+calledfunc : funcid '(' lexpr(',' aexpr)* ')' '{' stmt '}';               
            
-stmt : ( block SEMICOLON NEWLINE?)+ 
-     | (ifstmt NEWLINE*)+
-     | ('{' stmt ':' stmt '}'NEWLINE*)+
-     | '{' NEWLINE* stmt NEWLINE*'}'NEWLINE*
+stmt : block+
+     | ifstmt+
+     |'{' block ':' block '}'
+     |'{'stmt (';')*'}'
      ;
-
-block : funccall+
+     
+block : funccall
       | assgn+ 
       ;
 
-ifstmt :ifpart NEWLINE* elsepart;
+ifstmt :ifpart  elsepart;
 
-ifpart : 'if''(' bexpr ')'NEWLINE*stmt;
+ifpart : 'if' '(' bexpr ')' ('{')* stmt ('}')* ;
 
-elsepart : 'else' NEWLINE* stmt;
+elsepart : 'else' '{' stmt '}'  ;
 
-funccall : intvars'='funcid'('lexpr','aexpr')'                                                      #funccallwithaexpr
-         | intvars'='funcid'('lexpr')'                                                              #funccallnoaexpr
+funccall : intvars'='funcid'('lexpr (','aexpr)* ')' SEMICOLON               
          ;
 
-assgn : locvars'.'intvars'='aexpr
-      | intvars'='aexpr
-      | 'return' rtnexpr
+assgn : locvars'.'intvars'='aexpr SEMICOLON
+      | intvars'='aexpr  SEMICOLON
+      | 'return' rtnexpr SEMICOLON
       ;
       
 lexpr : locvars
       | lexpr '.' locvars
       ;
 
-bexpr : 'true'
-      | aexpr'>''0'
-      | lexpr '==''nil'
+bexpr : aexpr('>'|'<'|'>='|'<='|'=='|'!=')'0'
+      | lexpr ('=='|'!=')'nil'
       | '!'bexpr
       | bexpr'&&'bexpr
+      |'true'
       ;
 
 aexpr : '0' 
@@ -57,21 +54,16 @@ aexpr : '0'
 
 locvars : ID;
 
-rtnexpr : '0' 
-        | '1'
+rtnexpr : INT
         | rtnexpr ('+'|'-') rtnexpr
         | intvars
         ;
         
-intvars : INT
-        | ID
-        ;
+intvars : ID;
         
-funcid : ID ;
+funcid : ID;
 
 INT : [0-9]+;
 ID : [a-zA-Z]+;                       
-NEWLINE : '\r'? '\n';
-WS : [ \t]+ ->skip;
+WS : [ \r\n\t]+ ->skip;
 SEMICOLON : ';';
-HH : [\r\n]+ ->skip;
