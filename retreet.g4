@@ -13,7 +13,7 @@ calledfunc : funcid '(' lexpr(',' aexpr)* ')' '{' stmt '}';
 stmt : block+
      | ifstmt+
      |'{' block ':' block '}'
-     |'{'stmt (';')*'}'
+     |'{'stmt'}'
      ;
      
 block : funccall
@@ -22,7 +22,7 @@ block : funccall
 
 ifstmt :ifpart  elsepart;
 
-ifpart : 'if' '(' bexpr ')' ('{')* stmt ('}')* ;
+ifpart : 'if' '(' bexpr ')' '{' stmt '}' ;
 
 elsepart : 'else' '{' stmt '}'  ;
 
@@ -35,19 +35,19 @@ assgn : locvars'.'intvars'='aexpr SEMICOLON
       ;
       
 lexpr : locvars
-      | lexpr '.' locvars
+      | lexpr'.''left'
+      | lexpr'.''right'
       ;
 
 bexpr : aexpr('>'|'<'|'>='|'<='|'=='|'!=')'0'
       | lexpr ('=='|'!=')'nil'
       | '!'bexpr
       | bexpr'&&'bexpr
+      | bexpr'or'bexpr
       |'true'
       ;
 
-aexpr : '0' 
-      | '1'
-      | aexpr ('+'|'-') aexpr
+aexpr : aexpr ('+'|'-') aexpr
       | intvars
       | locvars '.' intvars
       ;
