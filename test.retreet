@@ -1,7 +1,7 @@
 main(n)
 {
 o=odd(n);
-e=even(m);
+e=even(m);   
 }
 
 odd(n,a)
@@ -13,13 +13,13 @@ odd(n,a)
      ls=even(n.l);
      rs=even(n.r);
      return rs+ls+1;
-  }
-  
+  } 
 }
 
 even(m){
- if (n==nil)
+ if (n==nil){
    return 0;
+ }
  else {
    ls=odd(n.l);
    rs=odd(n.r);
