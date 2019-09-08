@@ -4,14 +4,14 @@ o=odd(n);
 e=even(m);   
 }
 
-odd(n,a)
+odd(n)
 {
   if(true){
-     return 23;
+     return 0;
   }
   else {
-     ls=even(n.l);
-     rs=even(n.r);
+     ls=even(n.left);
+     rs=even(n.right);
      return rs+ls+1;
   } 
 }
@@ -21,8 +21,9 @@ even(m){
    return 0;
  }
  else {
-   ls=odd(n.l);
-   rs=odd(n.r);
-   return ls+rs;
+   ls=odd(n.left);
+   rs=odd(n.right);
+   ret = ls+rs;
+   return ret;
  }
 }

@@ -1,69 +1,171 @@
 grammar Retreet;                         
 
-prog : func+ ;                                  
+prog 
+      : (function)+ 
+      ;                                  
 
-func : main 
-     | calledfunc+
-     ;
+id
+      : IDENTIFIER
+      ;
 
-main : 'main' '(' locvars ')''{' stmt '}';
+function 
+      : main 
+      | func
+      ;
 
-calledfunc : funcid '(' lexpr(',' aexpr)* ')' '{' stmt '}';               
+main 
+      : 'main' '(' id ')''{' stmt_list '}'
+      ;
+
+func 
+      : id '(' param_list ')' '{' stmt_list '}'
+      ;               
+
+param_list 
+      : id   // loc variable
+      | id param_tail   // loc & int variables
+      ;
+
+param_tail
+      : ',' id param_tail   // int variable
+      | // empty
+      ;
+
+stmt_list
+      : stmt stmt_list
+      | // empty
+      ;
            
-stmt : block+
-     | ifstmt+
-     |'{' block ':' block '}'
-     |'{'stmt'}'
-     ;
+stmt 
+      : block
+      | if_stmt
+      |'[' block ':' block ']' // parallel
+      ;
      
-block : funccall
-      | assgn+ 
+block 
+      : call
+      | assgn_list
       ;
 
-ifstmt :ifpart  elsepart;
-
-ifpart : 'if' '(' bexpr ')' '{' stmt '}' ;
-
-elsepart : 'else' '{' stmt '}'  ;
-
-funccall : intvars'='funcid'('lexpr (','aexpr)* ')' SEMICOLON               
-         ;
-
-assgn : locvars'.'intvars'='aexpr SEMICOLON
-      | intvars'='aexpr  SEMICOLON
-      | 'return' rtnexpr SEMICOLON
-      ;
-      
-lexpr : locvars
-      | lexpr'.''left'
-      | lexpr'.''right'
+call 
+      : id '=' id '(' arg_list ')' ';'
       ;
 
-bexpr : aexpr('>'|'<'|'>='|'<='|'=='|'!=')'0'
-      | lexpr ('=='|'!=')'nil'
-      | '!'bexpr
-      | bexpr'&&'bexpr
-      | bexpr'or'bexpr
-      |'true'
+arg_list
+      : lexpr arg_list_tail
       ;
 
-aexpr : aexpr ('+'|'-') aexpr
-      | intvars
-      | locvars '.' intvars
+arg_list_tail
+      : ',' aexpr arg_list_tail
+      | // empty
       ;
 
-locvars : ID;
+assgn_list
+      : assgn+
+      ;
 
-rtnexpr : INT
-        | rtnexpr ('+'|'-') rtnexpr
-        | intvars
-        ;
-        
-intvars : ID;
-        
-funcid : ID;
+assgn 
+      : field '=' aexpr ';'
+      | id '=' aexpr ';'
+      | 'return' rtnexpr ';'
+      ;
 
-INT : [0-9]+;
-ID : [a-zA-Z]+;                       
-WS : [ \r\n\t]+ ->skip;
-SEMICOLON : ';';
+if_stmt 
+      :if_part else_part;
+
+if_part 
+      : 'if' '(' bexpr ')' '{' stmt_list '}'
+      ;
+
+else_part 
+      : 'else' '{' stmt_list '}'
+      ;
+
+lexpr 
+      : id
+      | lexpr '.' dir
+      ;
+
+dir
+      : 'left'
+      | 'right'
+      ;
+
+aexpr 
+      : INT
+      | id
+      | field
+      | aexpr aop aexpr
+      ;
+
+aop
+      : '+'
+      | '-'
+      ;
+
+field
+      : id '.' id
+      ;
+
+rtnexpr 
+      : aexpr
+      ;
+
+bexpr
+      : lit bexpr_suffix
+      ;
+
+bexpr_suffix
+      : '&&' lit bexpr_suffix
+      | '||' lit bexpr_suffix
+      | // empty
+      ;
+
+lit
+      : '!' basic_cond
+      | basic_cond
+      ;
+
+basic_cond
+      : aexpr compop aexpr
+      | lexpr eqop 'nil'
+      | 'true'
+      | 'false'
+      ;
+
+compop
+      : '>'
+      | '<'
+      | '>='
+      | '<='
+      | eqop
+      ;
+
+eqop
+      : '=='
+      | '!='
+      ;
+
+WHITESPACE
+      : ( ' ' | '\t' | '\r' | '\n' )+ -> skip
+      ;
+
+KEYWORD
+      : 'main'
+      | 'if'
+      | 'else'
+      | 'nil'
+      | 'return'
+      | 'left'
+      | 'right'
+      | 'true'
+      | 'false'
+      ;
+
+IDENTIFIER 
+      : [a-zA-Z]+
+      ;
+
+INT
+      : [0-9]+
+      ;
