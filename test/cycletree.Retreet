@@ -1,0 +1,70 @@
+main(n){
+  RootMode(n,0);                       //调用形式 id=id(arg_list);
+  ComputeRouting(n);
+}
+
+RootMode(n,number){
+  if(n == nil){ 
+     return 0; 
+  }
+  else{
+     n.num = number;
+     number = number+1;
+     PreMode(n.left,number);
+     PostMode(n.right,number);
+  }
+}
+
+PreMode(n,number){
+  if (n == nil) {
+     return 0;
+  }
+  else{
+     n.num = number;
+     number = number+1;
+     PreMode(n.left, number);
+     InMode(n.right, number);
+  }
+}
+
+InMode(n,number){
+   if (n == nil) {
+      return 0;
+   }
+   else{
+      PostMode(n.left,number);
+      n.num = number;
+      number = number+1;
+      PreMode(n.right,number);
+   }
+}
+
+PostMode(n,number){
+   if (n == nil){
+       return 0;
+   } 
+   else{ 
+       InMode(n.left,number);
+       PostMode(n.right,number);
+       n.num = number;
+       number = number+1;
+   }
+}
+
+ComputeRouting(n){
+   if (n == nil) {
+       return 0;
+   }
+   else{
+      ComputeRouting(n.left);
+      ComputeRouting(n.righyt);
+      n.lmin = n.left.min;           //n.left.min
+      n.rmin = n.right.min;
+      n.lmax = n.left.max;
+      n.rmax = n.right.max;
+      n.max = MAX(n.lmax, n.rmax, n.num);
+      n.min = MIN(n.lmin, n.rmin, n.num);
+   }
+}
+
+
