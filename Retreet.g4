@@ -104,7 +104,7 @@ aop
       ;
 
 field
-      : id '.' id
+      : lexpr '.' id
       ;
 
 rtnexpr 
