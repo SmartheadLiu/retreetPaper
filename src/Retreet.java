@@ -48,6 +48,12 @@ public class Retreet {
             if (block.getCallFlag()) {
                 System.out.println("It's a call block. It calls function: " + block.getCallname());
             }
+            if (!block.callseq.isEmpty()) {
+                System.out.println("The call sequence is: ");
+                for (String s : block.callseq) {
+                    System.out.println("  " + s);
+                }
+            }
             if (!block.read.isEmpty()) {
                 System.out.println("The read set: ");
                 for (String s : block.read) {

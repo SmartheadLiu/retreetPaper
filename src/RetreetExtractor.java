@@ -20,6 +20,8 @@ public class RetreetExtractor extends RetreetBaseListener {
     String currFunc;
     String currBlock;
 
+    List<String> locseq = new LinkedList<String>();		// the location sequence of a lexpr, the first element is the node, the rest of elements are pointers
+
     // TODO: may need to distinguish the field (e.g. n.v and n.left.v)
     Set<String> currRead = new HashSet<String>();	// read set for this block
 	Set<String> currWrite = new HashSet<String>();	// write set for this block
@@ -80,6 +82,26 @@ public class RetreetExtractor extends RetreetBaseListener {
     	// reset the read set and write set
     	currRead.clear();
 		currWrite.clear();
+    }
+
+    public void enterLexpr(RetreetParser.LexprContext ctx) {
+    	locseq.clear();
+    }
+
+    public void exitLexpr(RetreetParser.LexprContext ctx) {
+    	if (ctx.id() != null) {
+    		locseq.add(ctx.id().getText());
+    	} else {
+    		locseq.add(ctx.getChild(2).getText());
+    	}
+    }
+
+    public void exitArg_list(RetreetParser.Arg_listContext ctx) {
+    	int currindex = blocks.size() - 1;
+    	Block block = blocks.get(currindex);
+    	block.callseq.clear();
+    	block.callseq.addAll(locseq);
+    	blocks.set(currindex, block);
     }
 
     public void exitBlock(RetreetParser.BlockContext ctx) {

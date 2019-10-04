@@ -1,7 +1,7 @@
 main(n)
 {
 o=odd(n);
-e=even(m);   
+e=even(n);   
 }
 
 odd(n)
