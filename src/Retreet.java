@@ -45,6 +45,9 @@ public class Retreet {
         System.out.println("Print out AllBlocks:");
         for (Block block : blocks) {
         	System.out.println("Block id: " + block.getId() + " Text: " + block.getText());
+            if (block.getCallFlag()) {
+                System.out.println("It's a call block. It calls function: " + block.getCallname());
+            }
         }
         System.out.println();
 

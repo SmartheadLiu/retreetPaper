@@ -61,6 +61,7 @@ public class RetreetExtractor extends RetreetBaseListener {
     	Block newblock = new Block(blockid, ctx.getText());
     	if (ctx.call() != null) {
     		newblock.setCall();
+    		newblock.setCallname(ctx.call().getChild(2).getText());
     		calls.add(blockid);
     	}
     	if (ctx.assgn_list() != null) {
