@@ -20,6 +20,10 @@ public class RetreetExtractor extends RetreetBaseListener {
     String currFunc;
     String currBlock;
 
+    // TODO: may need to distinguish the field (e.g. n.v and n.left.v)
+    Set<String> currRead = new HashSet<String>();	// read set for this block
+	Set<String> currWrite = new HashSet<String>();	// write set for this block
+
     public List<String> getFuncs() {
     	return this.funcs;
     }
@@ -73,6 +77,33 @@ public class RetreetExtractor extends RetreetBaseListener {
     	List<String> blocksInFunc = funcBlock.get(currFunc);
     	blocksInFunc.add(blockid);
     	funcBlock.put(currFunc, blocksInFunc);
+    	// reset the read set and write set
+    	currRead.clear();
+		currWrite.clear();
+    }
+
+    public void exitBlock(RetreetParser.BlockContext ctx) {
+    	int currindex = blocks.size() - 1;
+    	Block block = blocks.get(currindex);
+    	block.read.addAll(currRead);
+    	block.write.addAll(currWrite);
+    	blocks.set(currindex, block);
+    }
+
+    public void exitCall(RetreetParser.CallContext ctx) {
+    	currWrite.add(ctx.getChild(0).getText());
+    }
+
+    public void enterAssgn(RetreetParser.AssgnContext ctx) {
+    	if (ctx.getChildCount() == 4) {
+    		currWrite.add(ctx.getChild(0).getText());
+    	}
+    }
+
+    public void exitAexpr(RetreetParser.AexprContext ctx) {
+    	if (ctx.id() != null || ctx.field() != null) {
+    		currRead.add(ctx.getChild(0).getText());
+    	}
     }
 
 }
