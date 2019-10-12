@@ -1,0 +1,20 @@
+main(n)
+{
+  fused(n);  // 0
+  o = n.v;
+  e = n.s;  // 1
+}
+
+fused(n)
+{
+  if(n==nil){
+     return;  // 1
+  }
+  else {
+     fused(n.left);  // 2
+     fused(n.right);  // 3
+     n.v = n.left.s + n.right.s + 1;  // 4
+     n.s = n.left.v + n.right.v;
+     return;  // 5
+  } 
+}
