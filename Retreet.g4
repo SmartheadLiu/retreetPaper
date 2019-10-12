@@ -37,9 +37,13 @@ stmt_list
       ;
            
 stmt 
-      : block
+      : block_withid
       | if_stmt
-      |'[' block ':' block ']' // parallel
+      | '[' block ':' block ']' // parallel
+      ;
+
+block_withid
+      : block '//' INT
       ;
      
 block 
@@ -48,7 +52,7 @@ block
       ;
 
 call 
-      : id '=' id '(' arg_list ')' ';'
+      : id '(' arg_list ')' ';'
       ;
 
 arg_list
@@ -67,7 +71,7 @@ assgn_list
 assgn 
       : field '=' aexpr ';'
       | id '=' aexpr ';'
-      | 'return' rtnexpr ';'
+      | 'return' ';'
       ;
 
 if_stmt 
@@ -105,10 +109,6 @@ aop
 
 field
       : lexpr '.' id
-      ;
-
-rtnexpr 
-      : aexpr
       ;
 
 bexpr

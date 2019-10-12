@@ -1,29 +1,33 @@
 main(n)
 {
-o=odd(n);
-e=even(n);   
+  odd(n);  // 0
+  even(n);  // 1
+  o = n.v;
+  e = n.s;
+  return; // 2
 }
 
 odd(n)
 {
-  if(true){
-     return 0;
+  if(n==nil){
+     return;  // 3
   }
   else {
-     ls=even(n.left);
-     rs=even(n.right);
-     return rs+ls+1;
+     even(n.left);  // 4
+     even(n.right);  // 5
+     n.v = n.left.s + n.right.s + 1;
+     return;  // 6
   } 
 }
 
 even(m){
  if (n==nil){
-   return 0;
+   return;  // 7
  }
  else {
-   ls=odd(n.left);
-   rs=odd(n.right);
-   ret = ls+rs;
-   return ret;
+   odd(n.left);  // 8
+   odd(n.right);  // 9
+   n.v = n.left.s + n.right.s;
+   return;  // 10
  }
 }
