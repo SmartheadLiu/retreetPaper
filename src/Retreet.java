@@ -35,6 +35,8 @@ public class Retreet {
         Set<String> calls = listener.getCalls();
         Set<String> noncalls = listener.getNoncalls();
         Map<String, List<String>> funcBlock = listener.getFuncBlock();
+        Map<String, List<String>> sequential = listener.getSequential();
+        List<String> parallel = listener.getParallel();
 
         System.out.println("Print out AllFuncs:");
         for (String func : funcs) {
@@ -54,16 +56,34 @@ public class Retreet {
                     System.out.println("  " + s);
                 }
             }
-            if (!block.read.isEmpty()) {
-                System.out.println("The read set: ");
-                for (String s : block.read) {
+            if (!block.readvar.isEmpty()) {
+                System.out.println("The read set of variables: ");
+                for (String s : block.readvar) {
                     System.out.println("     " + s);
                 }
             }
-            if (!block.write.isEmpty()) {
-                System.out.println("The write set: ");
-                for (String s : block.write) {
+            if (!block.readfield.isEmpty()) {
+                System.out.println("The read set of fields: ");
+                for (List<String> field : block.readfield) {
+                    System.out.println("     field:");
+                    for (String s : field) {
+                        System.out.println("          " + s);
+                    }
+                }
+            }
+            if (!block.writevar.isEmpty()) {
+                System.out.println("The write set of variables: ");
+                for (String s : block.writevar) {
                     System.out.println("     " + s);
+                }
+            }
+            if (!block.writefield.isEmpty()) {
+                System.out.println("The write set of fields: ");
+                for (List<String> field : block.writefield) {
+                    System.out.println("     field:");
+                    for (String s : field) {
+                        System.out.println("          " + s);
+                    }
                 }
             }
         }
@@ -90,6 +110,17 @@ public class Retreet {
         	}
         }
         System.out.println();
+
+        System.out.println("Print out sequential relations in functions:");
+        for (String func : sequential.keySet()) {
+            List<String> seq = sequential.get(func);
+            System.out.println("Current function: " + func);
+            for (String b : seq) {
+                System.out.println("    block: " + b);
+            }
+        }
+        System.out.println();
+
 
 	}
 }

@@ -20,11 +20,15 @@ public class RetreetExtractor extends RetreetBaseListener {
     String currFunc;
     String currBlock;
 
+    Map<String, List<String>> sequential = new LinkedHashMap<String, List<String>>();// TODO: to complete in the future
+    List<String> parallel = new LinkedList<String>(); // parallelization only happens in main function
+
     List<String> locseq = new LinkedList<String>();		// the location sequence of a lexpr, the first element is the node, the rest of elements are pointers
 
-    // TODO: may need to distinguish the field (e.g. n.v and n.left.v)
-    Set<String> currRead = new HashSet<String>();	// read set for this block
-	Set<String> currWrite = new HashSet<String>();	// write set for this block
+    Set<String> currReadVar = new HashSet<String>();	// read set of variables for this block
+	Set<String> currWriteVar = new HashSet<String>();	// write set of variables for this block
+    Set<List<String>> currReadField = new HashSet<List<String>>();   // read set of fields for this block
+    Set<List<String>> currWriteField = new HashSet<List<String>>();  // write set of fields for this block
 
     public List<String> getFuncs() {
     	return this.funcs;
@@ -46,12 +50,22 @@ public class RetreetExtractor extends RetreetBaseListener {
     	return this.funcBlock;
     }
 
+    public Map<String, List<String>> getSequential() {
+        return this.sequential;
+    }
+
+    public List<String> getParallel() {
+        return this.parallel;
+    }
+
     public void enterMain(RetreetParser.MainContext ctx) {
     	String name = ctx.getChild(0).getText();
     	funcs.add(name);
     	currFunc = name;
     	List<String> blocksInFunc = new LinkedList<String>();
     	funcBlock.put(currFunc, blocksInFunc);
+        List<String> seqInFunc = new LinkedList<String>();
+        sequential.put(currFunc, seqInFunc);
     }
 
     public void enterFunc(RetreetParser.FuncContext ctx) {
@@ -60,6 +74,8 @@ public class RetreetExtractor extends RetreetBaseListener {
     	currFunc = name;
     	List<String> blocksInFunc = new LinkedList<String>();
     	funcBlock.put(currFunc, blocksInFunc);
+        List<String> seqInFunc = new LinkedList<String>();
+        sequential.put(currFunc, seqInFunc);
     }
 
     public void enterBlock(RetreetParser.BlockContext ctx) {
@@ -80,16 +96,24 @@ public class RetreetExtractor extends RetreetBaseListener {
     	blocksInFunc.add(blockid);
     	funcBlock.put(currFunc, blocksInFunc);
     	// reset the read set and write set
-    	currRead.clear();
-		currWrite.clear();
+    	currReadVar.clear();
+		currWriteVar.clear();
+        currReadField.clear();
+        currWriteField.clear();
+        // add this block id to current sequential
+        List<String> seqInFunc = sequential.get(currFunc);
+        seqInFunc.add(blockid);
+        sequential.put(currFunc, seqInFunc);
+
     }
 
-    public void enterLexpr(RetreetParser.LexprContext ctx) {
-    	locseq.clear();
-    }
+    // public void enterLexpr(RetreetParser.LexprContext ctx) {
+    // 	locseq.clear();
+    // }
 
     public void exitLexpr(RetreetParser.LexprContext ctx) {
     	if (ctx.id() != null) {
+            locseq.clear();
     		locseq.add(ctx.id().getText());
     	} else {
     		locseq.add(ctx.getChild(2).getText());
@@ -107,25 +131,64 @@ public class RetreetExtractor extends RetreetBaseListener {
     public void exitBlock(RetreetParser.BlockContext ctx) {
     	int currindex = blocks.size() - 1;
     	Block block = blocks.get(currindex);
-    	block.read.addAll(currRead);
-    	block.write.addAll(currWrite);
+    	block.readvar.addAll(currReadVar);
+    	block.writevar.addAll(currWriteVar);
+        block.readfield.addAll(currReadField);
+        block.writefield.addAll(currWriteField);
     	blocks.set(currindex, block);
     }
 
-    public void exitCall(RetreetParser.CallContext ctx) {
-    	//currWrite.add(ctx.getChild(0).getText());
+    // public void exitCall(RetreetParser.CallContext ctx) {
+    // 	currWrite.add(ctx.getChild(0).getText());
+    // }
+
+    public void exitAssgn(RetreetParser.AssgnContext ctx) {
+    	if (ctx.id() != null) {
+    		currWriteVar.add(ctx.id().getText());
+    	}
     }
 
-    public void enterAssgn(RetreetParser.AssgnContext ctx) {
-    	if (ctx.getChildCount() == 4) {
-    		currWrite.add(ctx.getChild(0).getText());
-    	}
+    public void exitField(RetreetParser.FieldContext ctx) {
+        if (ctx.getParent().getChildCount() == 4) {
+            // field written in assgn
+            List<String> field = new LinkedList<String>();
+            field.addAll(locseq);
+            field.add(ctx.getChild(2).getText());
+            currWriteField.add(field);
+        } else if (ctx.getParent().getChildCount() == 1) {
+            // field read in aexpr
+            List<String> field = new LinkedList<String>();
+            field.addAll(locseq);
+            field.add(ctx.getChild(2).getText());
+            currReadField.add(field);
+        }
     }
 
     public void exitAexpr(RetreetParser.AexprContext ctx) {
-    	if (ctx.id() != null || ctx.field() != null) {
-    		currRead.add(ctx.getChild(0).getText());
+    	if (ctx.id() != null) {
+    		currReadVar.add(ctx.getChild(0).getText());
     	}
+    }
+
+    public void exitIf_part(RetreetParser.If_partContext ctx) {
+        // TODO!! 
+        // actually sequential should be a set of new data-structures
+        // which stores the path condition and the corresponding sequential
+        // here we assume there is only one conditional in each function
+        // and the if branch is "isNil"
+        List<String> seqInFunc = sequential.get(currFunc);
+        seqInFunc.clear();
+        sequential.put(currFunc, seqInFunc);
+    }
+
+    public void enterStmt(RetreetParser.StmtContext ctx) {
+        // TODO!!
+        // here we assume parallelization only happens in main function
+        // and there is only one pair of parallelization in a function
+        if (ctx.getChildCount() == 5) {
+            parallel.add(ctx.getChild(1).getChild(2).getText());
+            parallel.add(ctx.getChild(3).getChild(2).getText());
+        }
     }
 
 }

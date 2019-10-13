@@ -14,11 +14,11 @@ function
       ;
 
 main 
-      : 'main' '(' id ')''{' stmt_list '}'
+      : 'main' '(' id ')''{' stmt+ '}'
       ;
 
 func 
-      : id '(' param_list ')' '{' stmt_list '}'
+      : id '(' param_list ')' '{' stmt+ '}'
       ;               
 
 param_list 
@@ -28,11 +28,6 @@ param_list
 
 param_tail
       : ',' id param_tail   // int variable
-      | // empty
-      ;
-
-stmt_list
-      : stmt stmt_list
       | // empty
       ;
            
@@ -78,11 +73,11 @@ if_stmt
       :if_part else_part;
 
 if_part 
-      : 'if' '(' bexpr ')' '{' stmt_list '}'
+      : 'if' '(' bexpr ')' '{' stmt+ '}'
       ;
 
 else_part 
-      : 'else' '{' stmt_list '}'
+      : 'else' '{' stmt+ '}'
       ;
 
 lexpr 
