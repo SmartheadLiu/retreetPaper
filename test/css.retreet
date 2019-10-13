@@ -1,0 +1,44 @@
+main(n){
+    convertvalues(n);
+    minifyfont(n);
+    reduceinit(n);
+}
+
+convertvalues(n){
+    if(n==nil){
+        return;
+    }
+    else{
+        convertvalues(n.left)
+        convertvalues(n.right)
+        if(n.type == "word" || n.type== "func" ){
+            n.value=TransValue(n.value);
+        }
+    }
+}
+
+minifyfont(n){
+    if(n==nil){
+        return 0;   
+    }
+    else{
+        minifyfont(n.left)
+        minifyfont(n.right)
+        if(n.prop == "font-weight"){
+            n.value=MinifyWeight(n.value);
+        }
+    }
+}
+
+reduceinit(n){
+    if(n==nil){
+        return 0;   
+    }
+    else{
+        reduceinit(n.left)
+        reduceinit(n.right)
+        if(length(n.value) < initialLength){
+            n.value=ReduceInitial(n.value);
+        }
+    }
+}

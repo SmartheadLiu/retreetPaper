@@ -1,0 +1,28 @@
+main(n)
+{
+    swap(n);
+    incrmLeft(n);
+}
+
+swap(n) {
+    if (n == nil){
+        return;
+    }
+    else{
+        swap(n.l);
+        swap(n.r);
+        tmp = n.l;
+        n.l = n.r;
+        n.r = tmp;
+    }
+}
+
+incrmLeft(n) {
+    if (n == nil) {
+        return;
+    } else{
+        incrmLeft(n.l);
+        incrmLeft(n.r);
+        n.v = n.l.v + 1;
+    }
+}
