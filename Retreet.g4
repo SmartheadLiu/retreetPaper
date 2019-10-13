@@ -39,7 +39,7 @@ stmt_list
 stmt 
       : block_withid
       | if_stmt
-      | '[' block ':' block ']' // parallel
+      | '[' block_withid ':' block_withid ']' // parallel
       ;
 
 block_withid

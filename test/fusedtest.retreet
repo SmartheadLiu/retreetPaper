@@ -8,13 +8,13 @@ main(n)
 fused(n)
 {
   if(n==nil){
-     return;  // 1
+     return;  // 2
   }
   else {
-     fused(n.left);  // 2
-     fused(n.right);  // 3
-     n.v = n.left.s + n.right.s + 1;  // 4
+     fused(n.left);  // 3
+     fused(n.right);  // 4
+     n.v = n.left.s + n.right.s + 1;  // 5
      n.s = n.left.v + n.right.v;
-     return;  // 5
+     return;  // 6
   } 
 }

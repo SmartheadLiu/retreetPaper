@@ -5,13 +5,13 @@ import org.antlr.v4.runtime.tree.*;
 public class RetreetExtractor extends RetreetBaseListener {
 
     List<String> funcs = new LinkedList<String>();		// AllFuncs
-    List<String> params = new LinkedList<String>();		// 
+    List<String> params = new LinkedList<String>();		// TODO
     List<Block> blocks = new LinkedList<Block>();		// AllBlocks
     Set<String> calls = new HashSet<String>();		// AllCalls: a set of ids of the call block
     Set<String> noncalls = new HashSet<String>();	// AllNonCalls: a set of ids of the noncall block
 
     Map<String, List<String>> funcBlock = new LinkedHashMap<String, List<String>>();		// Blocks(f)
-    Map<String, List<String>> funcParam = new LinkedHashMap<String, List<String>>();		// Params(f)
+    Map<String, List<String>> funcParam = new LinkedHashMap<String, List<String>>();		// Params(f) TODO
 
     // Map<String, List<String>> read = new LinkedHashMap<String, List<String>>();		// read set
     // Map<String, List<String>> write = new LinkedHashMap<String, List<String>>();		// write set
@@ -63,7 +63,7 @@ public class RetreetExtractor extends RetreetBaseListener {
     }
 
     public void enterBlock(RetreetParser.BlockContext ctx) {
-    	String blockid = Integer.toString(blocks.size());
+    	String blockid = ctx.getParent().getChild(2).getText();
     	Block newblock = new Block(blockid, ctx.getText());
     	if (ctx.call() != null) {
     		newblock.setCall();
