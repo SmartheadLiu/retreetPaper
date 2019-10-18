@@ -87,7 +87,7 @@ public class RetreetExtractor extends RetreetBaseListener {
                 rblocks.put(blockid, blocks.get(blockid));
                 rblocklist.add(blockid);
                 blocksInFunc.add(blockid);
-                if (noncalls.contains(noncalls)) {
+                if (noncalls.contains(blockid)) {
                     rnoncalls.add(blockid);
                 }
             }
