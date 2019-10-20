@@ -1,18 +1,18 @@
 main(n)
 {
-  fused(n);  // 0
+  countingsize(n);  // 0
   o = n.v;
   e = n.s;  // 1
 }
 
-fused(n)
+countingsize(n)
 {
-  if(n==nil){
+  if(n == nil){
      return;  // 2
   }
   else {
-     fused(n.left);  // 3
-     fused(n.right);  // 4
+     countingsize(n.left);  // 3
+     countingsize(n.right);  // 4
      n.v = n.left.s + n.right.s + 1;  // 5
      n.s = n.left.v + n.right.v;
      return;  // 6
