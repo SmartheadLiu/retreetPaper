@@ -272,7 +272,7 @@ public class Generator {
 		writer.println("\n\t\t)");
 
 		// if x is in one of noncall blocks, then x is not in any other noncall block
-		writer.print("\t&(");
+		writer.print("\t& (");
 		for (String i : rnoncalls) {
 			for (String j : rnoncalls) {
 				if (!i.equals(j)) {
@@ -290,7 +290,7 @@ public class Generator {
 		// for node z which is not root, 
 		// if z is in call block that is calling on children nodes, 
 		// then there exist w where w is the parent of z
-		writer.print("\t&(");
+		writer.println("\t& (all1 z where z ~= root:");
 		// for every call in calls, find out their corresponding block
 		// check if the call is calling on child node
 		// convert the callseq to "0" or "1" ...
@@ -309,6 +309,7 @@ public class Generator {
 				andtmp.add("(" + zinLabel + " => ex1 w: w" + seq + " = z)");
 			}
 		}
+		writer.print("\t\t");
 		writer.print(getAnd(andtmp, "\t\t", true));
 		andtmp.clear();
 		writer.print("\n\t\t)");
