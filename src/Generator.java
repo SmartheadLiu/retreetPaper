@@ -71,8 +71,13 @@ public class Generator {
 	public void genfuse() {
 		writer.println("ws2s;\n");
 		genconfig("Configuration", "C", unfused);
+		writer.println();
+		// should uncomment later
+		// genconfig("ConfigurationFused", "D", fused);
+		// writer.println();
+		genordered("Ordered", "Configuration", "C", unfused);
+		writer.println();
 		writer.close();
-		
 	}
 
 	// generate configuration predicate 
@@ -83,14 +88,13 @@ public class Generator {
 		Set<String> calls = extractor.getCalls();
 		Set<String> rnoncalls = extractor.getRdcdNoncalls();
 		Map<String, List<String>> rfuncBlock = extractor.getRdcdFuncBlock();
-		Map<String, List<String>> sequential = extractor.getSequential();
 		List<String> ortmp = new LinkedList<String>();
 		List<String> andtmp = new LinkedList<String>();
 		List<String> innerandtmp = new LinkedList<String>();
 
 		String v = "x";
 		// first the predicate signature
-		writer.print("pred " + configname + "(var1 x, var2 ");
+		writer.print("pred " + configname + "(var1 " + v + ", var2 ");
 		writer.print(genarglist(p, v, rblocklist));
 		writer.println(") = ");
 
@@ -299,9 +303,161 @@ public class Generator {
 
 	}
 
+	public void genordered(String ordername, String configname, String p, RetreetExtractor extractor) {
+		List<String> funcs = extractor.getFuncs();
+		Map<String, Block> rblocks = extractor.getRdcdBlocks();
+		List<String> rblocklist = extractor.getRdcdBlocklist();
+		Set<String> calls = extractor.getCalls();
+		Set<String> rnoncalls = extractor.getRdcdNoncalls();
+		Map<String, List<String>> rfuncBlock = extractor.getRdcdFuncBlock();
+		Map<String, List<String>> sequential = extractor.getSequential();
+		List<String> ortmp = new LinkedList<String>();
+		List<String> andtmp = new LinkedList<String>();
 
+		String x = "x";
+		String y = "y";
 
+		// first the predicate signature
+		writer.print("pred " + ordername + "(var1 " + x + ", " + y + ", var2 ");
+		writer.print(genarglist(p, x, rblocklist));
+		writer.print(", ");
+		writer.print(genarglist(p, y, rblocklist));
+		writer.println(") = ");
 
+		// the labels for x and y should not be exactly the same
+		for (String id : rblocklist) {
+			andtmp.add(l(p, id, x) + " = " + l(p, id, y));
+		}
+		writer.println("\t~(" + getAnd(andtmp, "", false) + ")");
+		andtmp.clear();
+
+		// labels for x and y should be valid configurations
+		writer.println("\t& " + configname + "(" + x + ", " + genarglist(p, x, rblocklist) + ")");
+		writer.println("\t& " + configname + "(" + y + ", " + genarglist(p, y, rblocklist) + ")");
+
+		// exists a node z which precede x and y in the tree, such that
+			// every node v precede z, v in labels of x <=> v in labels of y
+			// but labels of x and labels of y start to differ on z or children of z.
+		// first part: every node v precede z, v in labels of x <=> v in labels of y
+		writer.println("\t& (ex1 z: (z <= " + x + ") & (z <= " + y + ")");
+		writer.println("\t\t& (all1 v:");
+		writer.println("\t\t\t(v < z) => ");
+		writer.print("\t\t\t(\t");
+		for (String id : rblocklist) {
+			andtmp.add("(v in " + l(p, id, x) + " <=> v in " + l(p, id, y) + ")");
+		}
+		writer.print(getAnd(andtmp, "\t\t\t\t", true));
+		andtmp.clear();
+		writer.println(" )");
+		writer.println("\t\t\t)");
+		// second part: but labels of x and labels of y start to differ on z or children of z.
+		writer.print("\t\t& (");
+		// for every call block
+		// find out the function which the call block actually calls
+		// get the sequential relation corresponding to the function
+		// list all possibilities
+		List<String> seqmain = sequential.get("main");
+		for (int i = 0; i < seqmain.size(); i++) {
+			andtmp.add("(z in " + l(p, "main", x) + ")");
+			andtmp.add("(z in " + l(p, "main", y) + ")");
+			// get the block, check if it's a call
+			Block iblock = rblocks.get(seqmain.get(i));
+			if (iblock.getCallFlag()) {
+				// if it is a call, get the callseq of the call, z.callseq should be in that call block
+				List<String> icallseq = iblock.callseq;
+				String iseq = "";
+				for (int m = 1; m < icallseq.size(); m++) {
+					if (icallseq.get(m).equals("left")) {
+						iseq = iseq + ".0";
+					} else if (icallseq.get(m).equals("right")) {
+						iseq = iseq + ".1";
+					}
+				}
+				andtmp.add("(z" + iseq + " in " + l(p, seqmain.get(i), x) + ")");
+			} else {
+				// if it's noncall, z should be in the noncall block
+				andtmp.add("(z in " + l(p, seqmain.get(i), x) + ")");
+			}
+			for (int j = i + 1; j < seqmain.size(); j++) {
+				Block jblock = rblocks.get(seqmain.get(j));
+				if (jblock.getCallFlag()) {
+					// if it is a call, get the callseq of the call, z.callseq should be in that call block
+					List<String> jcallseq = jblock.callseq;
+					String jseq = "";
+					for (int m = 1; m < jcallseq.size(); m++) {
+						if (jcallseq.get(m).equals("left")) {
+							jseq = jseq + ".0";
+						} else if (jcallseq.get(m).equals("right")) {
+							jseq = jseq + ".1";
+						}
+					}
+					andtmp.add("(z" + jseq + " in " + l(p, seqmain.get(j), y) + ")");
+				} else {
+					// if it's noncall, z should be in the noncall block
+					andtmp.add("(z in " + l(p, seqmain.get(j), y) + ")");
+				}
+				ortmp.add(getAnd(andtmp, "\t\t\t\t", true));
+				andtmp.remove(andtmp.size() - 1);
+			}
+			andtmp.clear();
+		}
+		for (String callid : calls) {
+			String funcname = rblocks.get(callid).getCallname();
+			List<String> seqfunc = sequential.get(funcname);
+			for (int i = 0; i < seqfunc.size(); i++) {
+				andtmp.add("(z in " + l(p, callid, x) + ")");
+				andtmp.add("(z in " + l(p, callid, y) + ")");
+				// get the block, check if it's a call
+				Block iblock = rblocks.get(seqfunc.get(i));
+				if (iblock.getCallFlag()) {
+					// if it is a call, get the callseq of the call, z.callseq should be in that call block
+					List<String> icallseq = iblock.callseq;
+					String iseq = "";
+					for (int m = 1; m < icallseq.size(); m++) {
+						if (icallseq.get(m).equals("left")) {
+							iseq = iseq + ".0";
+						} else if (icallseq.get(m).equals("right")) {
+							iseq = iseq + ".1";
+						}
+					}
+					andtmp.add("(z" + iseq + " in " + l(p, seqfunc.get(i), x) + ")");
+				} else {
+					// if it's noncall, z should be in the noncall block
+					andtmp.add("(z in " + l(p, seqfunc.get(i), x) + ")");
+				}
+				for (int j = i + 1; j < seqfunc.size(); j++) {
+					Block jblock = rblocks.get(seqfunc.get(j));
+					if (jblock.getCallFlag()) {
+						// if it is a call, get the callseq of the call, z.callseq should be in that call block
+						List<String> jcallseq = jblock.callseq;
+						String jseq = "";
+						for (int m = 1; m < jcallseq.size(); m++) {
+							if (jcallseq.get(m).equals("left")) {
+								jseq = jseq + ".0";
+							} else if (jcallseq.get(m).equals("right")) {
+								jseq = jseq + ".1";
+							}
+						}
+						andtmp.add("(z" + jseq + " in " + l(p, seqfunc.get(j), y) + ")");
+					} else {
+						// if it's noncall, z should be in the noncall block
+						andtmp.add("(z in " + l(p, seqfunc.get(j), y) + ")");
+					}
+					ortmp.add(getAnd(andtmp, "\t\t\t\t", true));
+					andtmp.remove(andtmp.size() - 1);
+				}
+				andtmp.clear();
+			}
+		}
+		writer.print(getOr(ortmp, "\t\t\t", true));
+		ortmp.clear();
+		writer.println("\n\t\t\t)");
+		writer.print("\t\t)");
+
+		// ordered comes to an end
+		writer.println(";");
+
+	}
 
 
 
