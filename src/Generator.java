@@ -341,6 +341,7 @@ public class Generator {
 		writer.println(") = ");
 
 		// the labels for x and y should not be exactly the same
+		andtmp.add(l(p, "main", x) + " = " + l(p, "main", y));
 		for (String id : rblocklist) {
 			andtmp.add(l(p, id, x) + " = " + l(p, id, y));
 		}
@@ -359,6 +360,7 @@ public class Generator {
 		writer.println("\t\t& (all1 v:");
 		writer.println("\t\t\t(v < z) => ");
 		writer.print("\t\t\t(\t");
+		andtmp.add("(v in " + l(p, "main", x) + " <=> v in " + l(p, "main", y) + ")");
 		for (String id : rblocklist) {
 			andtmp.add("(v in " + l(p, id, x) + " <=> v in " + l(p, id, y) + ")");
 		}
