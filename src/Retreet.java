@@ -188,9 +188,32 @@ public class Retreet {
         }
         System.out.println();
 
+        System.out.println("Print out relationship mapping from unfused to fused blocks:");
+        Map<String, List<String>> unfused2fused = listener.getUnfused2fused();
+        for (String unfused : unfused2fused.keySet()) {
+            List<String> fusedlist = unfused2fused.get(unfused);
+            System.out.print("Unfused: " + unfused + " =>");
+            for (String fused : fusedlist) {
+                System.out.print(" " + fused);
+            }
+            System.out.print("\n");
+        }
+        System.out.println();
 
-        Generator generator = new Generator("test", listener);
-        generator.genfuse();
+        System.out.println("Print out relationship mapping from fused to unfused blocks:");
+        Map<String, List<String>> fused2unfused = listener.getFused2unfused();
+        for (String fused : fused2unfused.keySet()) {
+            List<String> unfusedlist = fused2unfused.get(fused);
+            System.out.print("Fused: " + fused + " =>");
+            for (String unfused : unfusedlist) {
+                System.out.print(" " + unfused);
+            }
+            System.out.print("\n");
+        }
+        System.out.println();
+
+        // Generator generator = new Generator("test", listener);
+        // generator.genfuse();
 
 	}
 }

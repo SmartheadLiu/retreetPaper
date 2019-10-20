@@ -2,7 +2,12 @@ grammar Retreet;
 
 prog 
       : (function)+ 
+      | (relation)+
       ;                                  
+
+relation
+      : 'unfused' ':' INT '->' 'fused' ':' INT
+      ;
 
 id
       : IDENTIFIER

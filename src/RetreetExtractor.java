@@ -27,6 +27,9 @@ public class RetreetExtractor extends RetreetBaseListener {
     Set<List<String>> currReadField = new HashSet<List<String>>();   // read set of fields for this block
     Set<List<String>> currWriteField = new HashSet<List<String>>();  // write set of fields for this block
 
+    Map<String, List<String>> unfused2fused = new LinkedHashMap<String, List<String>>();
+    Map<String, List<String>> fused2unfused = new LinkedHashMap<String, List<String>>();
+
     Map<String, Block> rblocks = new LinkedHashMap<String, Block>();       // reduced AllBlocks
     List<String> rblocklist = new LinkedList<String>();
     Set<String> rnoncalls = new HashSet<String>();   // reduced AllNonCalls: a set of ids of the noncall block
@@ -78,6 +81,39 @@ public class RetreetExtractor extends RetreetBaseListener {
 
     public Map<String, List<String>> getRdcdFuncBlock() {
         return this.rfuncBlock;
+    }
+
+    public Map<String, List<String>> getUnfused2fused() {
+        return this.unfused2fused;
+    }
+
+    public Map<String, List<String>> getFused2unfused() {
+        return this.fused2unfused;
+    }
+
+    public void exitRelation(RetreetParser.RelationContext ctx) {
+        String unfusedid = ctx.getChild(2).getText();
+        String fusedid = ctx.getChild(6).getText();
+        // add unfused to fused mapping to unfused2fused
+        if (unfused2fused.get(unfusedid) == null) {
+            List<String> fusedlist = new LinkedList<String>();
+            fusedlist.add(fusedid);
+            unfused2fused.put(unfusedid, fusedlist);
+        } else {
+            List<String> fusedlist = unfused2fused.get(unfusedid);
+            fusedlist.add(fusedid);
+            unfused2fused.put(unfusedid, fusedlist);
+        }
+        // add fused to unfused mapping to fused2unfused
+        if (fused2unfused.get(fusedid) == null) {
+            List<String> unfusedlist = new LinkedList<String>();
+            unfusedlist.add(unfusedid);
+            fused2unfused.put(fusedid, unfusedlist);
+        } else {
+            List<String> unfusedlist = fused2unfused.get(fusedid);
+            unfusedlist.add(unfusedid);
+            fused2unfused.put(fusedid, unfusedlist);
+        }
     }
 
     public void exitProg(RetreetParser.ProgContext ctx) {
