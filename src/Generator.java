@@ -21,6 +21,20 @@ public class Generator {
 		
 	}
 
+	public Generator(String filename, RetreetExtractor unfused, RetreetExtractor fused, RetreetExtractor relation) {
+		this.unfused = unfused;
+		this.fused = fused;
+		this.relation = relation;
+		File file = new File("//Users//yanjunwang//Documents//work//fusion//implementation//output//" + filename + ".mona");
+		// file.getParentFile().mkdirs();
+		try {
+			writer = new PrintWriter(file);
+		} catch (FileNotFoundException fnfe) {
+			System.out.println(fnfe);
+		}
+		
+	}
+
 	public String getOr(List<String> store, String tabs, boolean newline) {
 		String ret = "";
 		for (int i = 0; i < store.size(); i++) {
@@ -72,10 +86,11 @@ public class Generator {
 		writer.println("ws2s;\n");
 		genconfig("Configuration", "C", unfused);
 		writer.println();
-		// should uncomment later
-		// genconfig("ConfigurationFused", "D", fused);
-		// writer.println();
+		genconfig("ConfigurationFused", "D", fused);
+		writer.println();
 		genordered("Ordered", "Configuration", "C", unfused);
+		writer.println();
+		genordered("OrderedFused", "ConfigurationFused", "D", fused);
 		writer.println();
 		writer.close();
 	}
