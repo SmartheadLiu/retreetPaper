@@ -44,11 +44,13 @@ stmt
 
 block_withid
       : block '//' INT
+      //| if_stmt_withid '//' INT
       ;
      
 block 
       : call
       | assgn_list
+      | single_if_stmt
       ;
 
 call 
@@ -74,6 +76,10 @@ assgn
       | 'return' ';'
       ;
 
+single_if_stmt
+      : 'if' '(' bexpr ')' '{' assgn_list '}'
+      ;
+
 if_stmt 
       :if_part else_part;
 
@@ -83,6 +89,7 @@ if_part
 
 else_part 
       : 'else' '{' stmt+ '}'
+      | // empty
       ;
 
 lexpr 

@@ -159,7 +159,7 @@ public class RetreetExtractor extends RetreetBaseListener {
     		newblock.setCallname(ctx.call().getChild(0).getText());
     		calls.add(blockid);
     	}
-    	if (ctx.assgn_list() != null) {
+    	if (ctx.assgn_list() != null || ctx.single_if_stmt() != null) {
     		newblock.setNoncall();
     		noncalls.add(blockid);
     	}
@@ -180,10 +180,6 @@ public class RetreetExtractor extends RetreetBaseListener {
         seqInFunc.add(blockid);
         sequential.put(currFunc, seqInFunc);
     }
-
-    // public void enterLexpr(RetreetParser.LexprContext ctx) {
-    // 	locseq.clear();
-    // }
 
     public void exitLexpr(RetreetParser.LexprContext ctx) {
     	if (ctx.id() != null) {
