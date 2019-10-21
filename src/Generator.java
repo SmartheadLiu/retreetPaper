@@ -96,6 +96,8 @@ public class Generator {
 		writer.println();
 		genconvert("C", "D", unfused.getRdcdBlocklist(), fused.getRdcdBlocklist(), relation);
 		writer.println();
+		genfuseconstraint("OrderedFused", "C", "D", unfused.getRdcdBlocklist(), fused.getRdcdBlocklist());
+		writer.println();
 		writer.close();
 	}
 
@@ -638,6 +640,60 @@ public class Generator {
 
 		// convert comes to an end
 		writer.println("\n\t);");
+
+	}
+
+	public void genfuseconstraint(String fusedorder, String pu, String pf, List<String> ufblck, List<String> fblck) {
+		String x = "x";
+		String y = "y";
+
+		// declare var1 x, y first
+		writer.println("var1 " + x + ", " + y + ";");
+		writer.println();
+
+		// declare var2
+		writer.print("var2 ");
+		writer.print(genarglist(pu, x, ufblck));
+		writer.print(", ");
+		writer.print(genarglist(pu, y, ufblck));
+		writer.print(", ");
+		writer.print(genarglist(pf, x, fblck));
+		writer.print(", ");
+		writer.print(genarglist(pf, y, fblck));
+		writer.println(";");
+		writer.println();
+
+		// fusedordered y x
+		writer.print(fusedorder + "(" + y + ", " + x + ", ");
+		writer.print(genarglist(pf, y, fblck));
+		writer.print(", ");
+		writer.print(genarglist(pf, x, fblck));
+		writer.println(");");
+		writer.println();
+
+		// dependence x y
+		writer.print("Dependence(" + x + ", " + y + ", ");
+		writer.print(genarglist(pu, x, ufblck));
+		writer.print(", ");
+		writer.print(genarglist(pu, y, ufblck));
+		writer.println(");");
+		writer.println();
+
+		// convert labels of x from unfused to fused blocks
+		writer.print("Convert(");
+		writer.print(genarglist(pu, x, ufblck));
+		writer.print(", ");
+		writer.print(genarglist(pf, x, fblck));
+		writer.println(");");
+		writer.println();
+
+		// convert labels of x from unfused to fused blocks
+		writer.print("Convert(");
+		writer.print(genarglist(pu, y, ufblck));
+		writer.print(", ");
+		writer.print(genarglist(pf, y, fblck));
+		writer.println(");");
+		writer.println();
 
 	}
 
