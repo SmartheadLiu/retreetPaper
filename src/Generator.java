@@ -92,6 +92,9 @@ public class Generator {
 		writer.println();
 		genordered("OrderedFused", "ConfigurationFused", "D", fused);
 		writer.println();
+
+		genconvert("C", "D", unfused.getRdcdBlocklist(), fused.getRdcdBlocklist(), relation);
+		writer.println();
 		writer.close();
 	}
 
@@ -474,6 +477,50 @@ public class Generator {
 
 		// ordered comes to an end
 		writer.println(";");
+
+	}
+
+	public void genconvert(String pu, String pf, List<String> ufblck, List<String> fblck, RetreetExtractor extractor) {
+		Map<String, List<String>> unfused2fused = extractor.getUnfused2fused();
+    	Map<String, List<String>> fused2unfused = extractor.getFused2unfused();
+    	List<String> ortmp = new LinkedList<String>();
+		List<String> andtmp = new LinkedList<String>();
+
+		String x = "x";
+
+		// first the predicate signature
+		writer.print("pred Convert(var2 ");
+		writer.print(genarglist(pu, x, ufblck));
+		writer.print(", ");
+		writer.print(genarglist(pf, x, fblck));
+		writer.println(") = ");
+
+		// then for all node u, if u is in an unfused block, u should be in the corresponding fused block, and vice versa
+		writer.println("\t(all1 u:");
+		writer.print("\t\t( ");
+		andtmp.add("(u in " + l(pu, "main", x) + " <=> u in " + l(pf, "main", x) + ")");
+		for (String unfusedid : ufblck) {
+			List<String> fusedlist = unfused2fused.get(unfusedid);
+			for (String fusedid : fusedlist) {
+				ortmp.add("u in " + l(pf, fusedid, x));
+			}
+			andtmp.add("(u in " + l(pu, unfusedid, x) + " => (" + getOr(ortmp, "", false) + "))");
+			ortmp.clear();
+		}
+		for (String fusedid : fblck) {
+			List<String> unfusedlist = fused2unfused.get(fusedid);
+			for (String unfusedid : unfusedlist) {
+				ortmp.add("u in " + l(pu, unfusedid, x));
+			}
+			andtmp.add("(u in " + l(pf, fusedid, x) + " => (" + getOr(ortmp, "", false) + "))");
+			ortmp.clear();
+		}
+		writer.print(getAnd(andtmp, "\t\t", true));
+		andtmp.clear();
+		writer.print(" )");
+
+		// convert comes to an end
+		writer.println("\n\t);");
 
 	}
 
