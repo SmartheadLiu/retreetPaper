@@ -92,7 +92,8 @@ public class Generator {
 		writer.println();
 		genordered("OrderedFused", "ConfigurationFused", "D", fused);
 		writer.println();
-
+		gendependence("Ordered", "C", unfused);
+		writer.println();
 		genconvert("C", "D", unfused.getRdcdBlocklist(), fused.getRdcdBlocklist(), relation);
 		writer.println();
 		writer.close();
@@ -480,6 +481,122 @@ public class Generator {
 
 	}
 
+	public void gendependence(String ordername, String p, RetreetExtractor extractor) {
+		List<String> funcs = extractor.getFuncs();
+		Map<String, Block> rblocks = extractor.getRdcdBlocks();
+		List<String> rblocklist = extractor.getRdcdBlocklist();
+		Set<String> calls = extractor.getCalls();
+		Set<String> rnoncalls = extractor.getRdcdNoncalls();
+		Map<String, List<String>> rfuncBlock = extractor.getRdcdFuncBlock();
+		Map<String, List<String>> sequential = extractor.getSequential();
+		List<String> ortmp = new LinkedList<String>();
+		List<String> andtmp = new LinkedList<String>();
+
+		String x = "x";
+		String y = "y";
+
+		// first the predicate signature
+		writer.print("pred Dependence(var1 " + x + ", " + y + ", var2 ");
+		writer.print(genarglist(p, x, rblocklist));
+		writer.print(", ");
+		writer.print(genarglist(p, y, rblocklist));
+		writer.println(") = ");
+
+		// x y should be ordered
+		writer.println("\t" + ordername + "(" + x + ", " + y + ", " + genarglist(p, x, rblocklist) + ", " + genarglist(p, y, rblocklist) + ")");
+
+		// list the dependence
+		// for every noncall block, find out the write set
+		// for each variable in the write set, find the other noncall block that is reading or writing to that variable
+		// for each field in the write set, find out the callseq, find the other noncall block that is reading or writing to that field
+		writer.print("\t & (");
+		for (String ncid : rnoncalls) {
+			Block nc = rblocks.get(ncid);
+			for (String otherncid : rnoncalls) {
+				Block othernc = rblocks.get(otherncid);
+				if (!otherncid.equals(ncid)) {
+					// for each variable in the write set, find the other noncall block that is reading or writing to that variable
+					for (String v : nc.writevar) {
+						for (String writev : othernc.writevar) {
+							if (v.equals(writev)) {
+								andtmp.add(x + " in " + l(p, ncid, x));
+								andtmp.add(y + " in " + l(p, otherncid, y));
+								andtmp.add(x + " = " + y);
+								ortmp.add("(" +  getAnd(andtmp, "", false)  + ")");
+								andtmp.clear();
+							}
+						}
+						for (String readv : othernc.writevar) {
+							if (v.equals(readv)) {
+								andtmp.add(x + " in " + l(p, ncid, x));
+								andtmp.add(y + " in " + l(p, otherncid, y));
+								andtmp.add(x + " = " + y);
+								ortmp.add("(" +  getAnd(andtmp, "", false)  + ")");
+								andtmp.clear();
+							}
+						}
+					}
+
+					// for each field in the write set, find out the callseq, find the other noncall block that is reading or writing to that field
+					for (List<String> field : nc.writefield) {
+						String callseq = "";
+						for (int i = 1; i < field.size() - 1; i++) {
+							if (field.get(i).equals("left")) {
+								callseq = callseq + ".0";
+							} else if (field.get(i).equals("right")) {
+								callseq = callseq + ".1";
+							}
+						}
+						String fieldname = field.get(field.size() - 1);
+						for (List<String> otherfield : othernc.writefield) {
+							String othercallseq = "";
+							for (int i = 1; i < otherfield.size() - 1; i++) {
+								if (otherfield.get(i).equals("left")) {
+									othercallseq = othercallseq + ".0";
+								} else if (otherfield.get(i).equals("right")) {
+									othercallseq = othercallseq + ".1";
+								}
+							}
+							String otherfieldname = otherfield.get(otherfield.size() - 1);
+							if (fieldname.equals(otherfieldname)) {
+								andtmp.add(x + " in " + l(p, ncid, x));
+								andtmp.add(y + " in " + l(p, otherncid, y));
+								andtmp.add(x + callseq + " = " + y + othercallseq);
+								ortmp.add("(" +  getAnd(andtmp, "", false)  + ")");
+								andtmp.clear();
+							}
+						}
+						for (List<String> otherfield : othernc.readfield) {
+							String othercallseq = "";
+							for (int i = 1; i < otherfield.size() - 1; i++) {
+								if (otherfield.get(i).equals("left")) {
+									othercallseq = othercallseq + ".0";
+								} else if (otherfield.get(i).equals("right")) {
+									othercallseq = othercallseq + ".1";
+								}
+							}
+							String otherfieldname = otherfield.get(otherfield.size() - 1);
+							if (fieldname.equals(otherfieldname)) {
+								andtmp.add(x + " in " + l(p, ncid, x));
+								andtmp.add(y + " in " + l(p, otherncid, y));
+								andtmp.add(x + callseq + " = " + y + othercallseq);
+								ortmp.add("(" +  getAnd(andtmp, "", false)  + ")");
+								andtmp.clear();
+							}
+						}
+					}
+				}
+			}
+		}
+		writer.print(getOr(ortmp, "\t\t", true));
+		ortmp.clear();
+		writer.print(" )");
+
+		// dependence comes to an end
+		writer.println("\t;");
+
+	}
+
 	public void genconvert(String pu, String pf, List<String> ufblck, List<String> fblck, RetreetExtractor extractor) {
 		Map<String, List<String>> unfused2fused = extractor.getUnfused2fused();
     	Map<String, List<String>> fused2unfused = extractor.getFused2unfused();
@@ -523,7 +640,5 @@ public class Generator {
 		writer.println("\n\t);");
 
 	}
-
-
 
 }	
