@@ -116,6 +116,8 @@ public class Generator {
 		writer.println();
 		genParaDependence("C", "D", unfused, unfused.parallel.get(0), unfused.parallel.get(1));
 		writer.println();
+		genparaconstraint("Configuration_A", "Configuration_B", "C", "D", unfused);
+		writer.println();
 		writer.close();
 	}
 
@@ -476,7 +478,61 @@ public class Generator {
 
 	}
 
+	public void genparaconstraint(String config1, String config2, String p1, String p2, RetreetExtractor extractor) {
+		Map<String, Set<String>> callmap = extractor.getCallMap();
+		List<String> p1rblocklist = new LinkedList<String>(extractor.getRdcdBlocklist());
+		List<String> p2rblocklist = new LinkedList<String>(extractor.getRdcdBlocklist());
+		for (String func : extractor.getFuncs()) {
+			String funcname = extractor.getRdcdBlocks().get(extractor.parallel.get(0)).getCallname();
+			if (!callmap.get(funcname).contains(func)) {
+				p1rblocklist.removeAll(extractor.getRdcdFuncBlock().get(func));
+			}
+		}
+		p1rblocklist.add(extractor.parallel.get(0));
+		for (String func : extractor.getFuncs()) {
+			String funcname = extractor.getRdcdBlocks().get(extractor.parallel.get(1)).getCallname();
+			if (!callmap.get(funcname).contains(func)) {
+				p2rblocklist.removeAll(extractor.getRdcdFuncBlock().get(func));
+			}
+		}
+		p2rblocklist.add(extractor.parallel.get(1));
 
+		String x = "x";
+		String y = "y";
+
+		// declare var1 x, y first
+		writer.println("var1 " + x + ", " + y + ";");
+		writer.println();
+
+		// declare var2
+		writer.print("var2 ");
+		writer.print(genarglist(p1, x, p1rblocklist, false));
+		writer.print(", ");
+		writer.print(genarglist(p2, y, p2rblocklist, false));
+		writer.println(";");
+		writer.println();
+
+		// x is in A's config
+		writer.print(config1 + "(" + x + ", ");
+		writer.print(genarglist(p1, x, p1rblocklist, false));
+		writer.println(");");
+		writer.println();
+
+		// y is in B's config
+		writer.print(config2 + "(" + y + ", ");
+		writer.print(genarglist(p2, y, p2rblocklist, false));
+		writer.println(");");
+		writer.println();
+
+		// dependence x y
+		writer.print("Dependence(" + x + ", " + y + ", ");
+		writer.print(genarglist(p1, x, p1rblocklist, false));
+		writer.print(", ");
+		writer.print(genarglist(p2, y, p2rblocklist, false));
+		writer.println(");");
+		writer.println();
+
+	}
 
 	// generate configuration predicate 
 	public void genconfig(String configname, String p, RetreetExtractor extractor) {
