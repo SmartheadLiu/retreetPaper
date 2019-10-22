@@ -114,6 +114,8 @@ public class Generator {
 		writer.println();
 		genfuncconfig("Configuration_B", "D", unfused, unfused.parallel.get(1));
 		writer.println();
+		genParaDependence("C", "D", unfused, unfused.parallel.get(0), unfused.parallel.get(1));
+		writer.println();
 		writer.close();
 	}
 
@@ -297,7 +299,7 @@ public class Generator {
 			andtmp.clear();
 			writer.println("\n\t\t)");
 		}
-		
+
 		// for node z which is not root, 
 		// if z is in call block that is calling on children nodes, 
 		// then there exist w where w is the parent of z
@@ -329,6 +331,152 @@ public class Generator {
 		writer.println(";");
 
 	}
+
+	public void genParaDependence(String p1, String p2, RetreetExtractor extractor, String para1, String para2) {
+		Map<String, Set<String>> callmap = extractor.getCallMap();
+
+		List<String> p1funcs = new LinkedList<String>(extractor.getFuncs());
+		Map<String, Block> p1rblocks = new LinkedHashMap<String, Block>(extractor.getRdcdBlocks());
+		List<String> p1rblocklist = new LinkedList<String>(extractor.getRdcdBlocklist());
+		Set<String> p1calls = new HashSet<String>(extractor.getCalls());
+		Set<String> p1rnoncalls = new HashSet<String>(extractor.getRdcdNoncalls());
+		Map<String, List<String>> p1rfuncBlock = new LinkedHashMap<String, List<String>>(extractor.getRdcdFuncBlock());
+		for (String func : extractor.getFuncs()) {
+			String funcname = p1rblocks.get(para1).getCallname();
+			if (!callmap.get(funcname).contains(func)) {
+				p1calls.removeAll(p1rfuncBlock.get(func));
+				p1rnoncalls.removeAll(p1rfuncBlock.get(func));
+				p1rblocklist.removeAll(p1rfuncBlock.get(func));
+				p1funcs.remove(func);
+			}
+		}
+		p1calls.add(para1);
+		p1rblocklist.add(para1);
+
+		List<String> p2funcs = new LinkedList<String>(extractor.getFuncs());
+		Map<String, Block> p2rblocks = new LinkedHashMap<String, Block>(extractor.getRdcdBlocks());
+		List<String> p2rblocklist = new LinkedList<String>(extractor.getRdcdBlocklist());
+		Set<String> p2calls = new HashSet<String>(extractor.getCalls());
+		Set<String> p2rnoncalls = new HashSet<String>(extractor.getRdcdNoncalls());
+		Map<String, List<String>> p2rfuncBlock = new LinkedHashMap<String, List<String>>(extractor.getRdcdFuncBlock());
+		for (String func : extractor.getFuncs()) {
+			String funcname = p2rblocks.get(para2).getCallname();
+			if (!callmap.get(funcname).contains(func)) {
+				p2calls.removeAll(p2rfuncBlock.get(func));
+				p2rnoncalls.removeAll(p2rfuncBlock.get(func));
+				p2rblocklist.removeAll(p2rfuncBlock.get(func));
+				p2funcs.remove(func);
+			}
+		}
+		p2calls.add(para2);
+		p2rblocklist.add(para2);
+
+		List<String> ortmp = new LinkedList<String>();
+		List<String> andtmp = new LinkedList<String>();
+
+		String x = "x";
+		String y = "y";
+
+		// first the predicate signature
+		writer.print("pred Dependence(var1 " + x + ", " + y + ", var2 ");
+		writer.print(genarglist(p1, x, p1rblocklist, false));
+		writer.print(", ");
+		writer.print(genarglist(p2, y, p2rblocklist, false));
+		writer.println(") = ");
+
+		// list the dependence
+		// for every noncall block, find out the write set
+		// for each variable in the write set, find the other noncall block that is reading or writing to that variable
+		// for each field in the write set, find out the callseq, find the other noncall block that is reading or writing to that field
+		writer.print("\t (");
+		for (String ncid : p1rnoncalls) {
+			Block nc = p1rblocks.get(ncid);
+			for (String otherncid : p2rnoncalls) {
+				Block othernc = p2rblocks.get(otherncid);
+				// if (!otherncid.equals(ncid)) {
+					// for each variable in the write set, find the other noncall block that is reading or writing to that variable
+					for (String v : nc.writevar) {
+						for (String writev : othernc.writevar) {
+							if (v.equals(writev)) {
+								andtmp.add(x + " in " + l(p1, ncid, x));
+								andtmp.add(y + " in " + l(p2, otherncid, y));
+								andtmp.add(x + " = " + y);
+								ortmp.add("(" +  getAnd(andtmp, "", false)  + ")");
+								andtmp.clear();
+							}
+						}
+						for (String readv : othernc.writevar) {
+							if (v.equals(readv)) {
+								andtmp.add(x + " in " + l(p1, ncid, x));
+								andtmp.add(y + " in " + l(p2, otherncid, y));
+								andtmp.add(x + " = " + y);
+								ortmp.add("(" +  getAnd(andtmp, "", false)  + ")");
+								andtmp.clear();
+							}
+						}
+					}
+
+					// for each field in the write set, find out the callseq, find the other noncall block that is reading or writing to that field
+					for (List<String> field : nc.writefield) {
+						String callseq = "";
+						for (int i = 1; i < field.size() - 1; i++) {
+							if (field.get(i).equals("left")) {
+								callseq = callseq + ".0";
+							} else if (field.get(i).equals("right")) {
+								callseq = callseq + ".1";
+							}
+						}
+						String fieldname = field.get(field.size() - 1);
+						for (List<String> otherfield : othernc.writefield) {
+							String othercallseq = "";
+							for (int i = 1; i < otherfield.size() - 1; i++) {
+								if (otherfield.get(i).equals("left")) {
+									othercallseq = othercallseq + ".0";
+								} else if (otherfield.get(i).equals("right")) {
+									othercallseq = othercallseq + ".1";
+								}
+							}
+							String otherfieldname = otherfield.get(otherfield.size() - 1);
+							if (fieldname.equals(otherfieldname)) {
+								andtmp.add(x + " in " + l(p1, ncid, x));
+								andtmp.add(y + " in " + l(p2, otherncid, y));
+								andtmp.add(x + callseq + " = " + y + othercallseq);
+								ortmp.add("(" +  getAnd(andtmp, "", false)  + ")");
+								andtmp.clear();
+							}
+						}
+						for (List<String> otherfield : othernc.readfield) {
+							String othercallseq = "";
+							for (int i = 1; i < otherfield.size() - 1; i++) {
+								if (otherfield.get(i).equals("left")) {
+									othercallseq = othercallseq + ".0";
+								} else if (otherfield.get(i).equals("right")) {
+									othercallseq = othercallseq + ".1";
+								}
+							}
+							String otherfieldname = otherfield.get(otherfield.size() - 1);
+							if (fieldname.equals(otherfieldname)) {
+								andtmp.add(x + " in " + l(p1, ncid, x));
+								andtmp.add(y + " in " + l(p2, otherncid, y));
+								andtmp.add(x + callseq + " = " + y + othercallseq);
+								ortmp.add("(" +  getAnd(andtmp, "", false)  + ")");
+								andtmp.clear();
+							}
+						}
+					}
+				// }
+			}
+		}
+		writer.print(getOr(ortmp, "\t\t", true));
+		ortmp.clear();
+		writer.print(" )");
+
+		// dependence comes to an end
+		writer.println("\n\t;");
+
+	}
+
+
 
 	// generate configuration predicate 
 	public void genconfig(String configname, String p, RetreetExtractor extractor) {
@@ -723,7 +871,6 @@ public class Generator {
 		Set<String> calls = extractor.getCalls();
 		Set<String> rnoncalls = extractor.getRdcdNoncalls();
 		Map<String, List<String>> rfuncBlock = extractor.getRdcdFuncBlock();
-		Map<String, List<String>> sequential = extractor.getSequential();
 		List<String> ortmp = new LinkedList<String>();
 		List<String> andtmp = new LinkedList<String>();
 
