@@ -1,4 +1,5 @@
 import java.util.*;
+import java.io.File;
 import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.tree.*;
 import java.util.logging.Logger;
@@ -76,14 +77,46 @@ public class Retreet {
             RetreetExtractor relationlistener = new RetreetExtractor();
             relationwalker.walk(relationlistener, relationtree);
 
-            Generator generator = new Generator("test", unfusedlistener, fusedlistener, relationlistener);
+            Generator generator = new Generator("cycletree", unfusedlistener, fusedlistener, relationlistener);
             generator.genfuse();
 
         } else if (args[0].equals("parallel")) {
+            if (args.length != 2) {
+                System.out.println("For 'parallel' option, the arg length should be 2.");
+                System.exit(1);
+            }
 
+            ANTLRFileStream input = new ANTLRFileStream(args[1]);
+            RetreetLexer lexer = new RetreetLexer(input);
+            CommonTokenStream tokens = new CommonTokenStream(lexer);
+            RetreetParser parser = new RetreetParser(tokens);
 
+            Logger logger = Logger.getLogger("main");
+
+            ANTLRErrorStrategy es = new CustomErrorStrategy();
+            parser.setErrorHandler(es);
+
+            ParseTree tree = null;
+            try{
+                tree = parser.prog();
+                logger.info("Accepted");
+            } catch(Exception ex) {
+                logger.info("Not Accepted");
+                return;
+            }
+
+            ParseTreeWalker walker = new ParseTreeWalker();
+            RetreetExtractor listener = new RetreetExtractor();
+            walker.walk(listener, tree);
+
+            Generator generator = new Generator("parallel", listener);
+            generator.genpara();
 
         } else {
+            File file = new File(args[0]);
+            String filename = file.getName();
+            System.out.println("Filename: " + filename.substring(0, filename.indexOf(".")));
+
             ANTLRFileStream input = new ANTLRFileStream(args[0]);
             RetreetLexer lexer = new RetreetLexer(input);
             CommonTokenStream tokens = new CommonTokenStream(lexer);
@@ -261,6 +294,23 @@ public class Retreet {
                 System.out.println("Current function: " + func);
                 for (String b : blockList) {
                     System.out.println("    block: " + b);
+                }
+            }
+            System.out.println();
+
+
+            System.out.println("Print out parallel relations in functions:");
+            for (String p : parallel) {
+                System.out.println("    block: " + p);
+            }
+            System.out.println();
+
+            System.out.println("Print out callmap:");
+            Map<String, Set<String>> callmap = listener.getCallMap();
+            for (String func : funcs) {
+                System.out.println("  function: " + func);
+                for (String f : callmap.get(func)) {
+                    System.out.println("    called: " + f);
                 }
             }
             System.out.println();
