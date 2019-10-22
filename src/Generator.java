@@ -72,11 +72,18 @@ public class Generator {
 	}
 
 	// generate argument list for predicates
-	public String genarglist(String p, String var, List<String> list) {
+	public String genarglist(String p, String var, List<String> list, boolean main) {
 		// main function should have an unique blockid
-		String arglist = l(p, "main", var);
+		String arglist = "";
+		if (main) {
+			arglist = l(p, "main", var);
+		} 
 		for (String blockid : list) {
-			arglist = arglist + ", " + l(p, blockid, var);
+			if (arglist.equals("")) {
+				arglist = l(p, blockid, var);
+			} else {
+				arglist = arglist + ", " + l(p, blockid, var);
+			}
 		}
 		return arglist;
 	}
@@ -101,6 +108,228 @@ public class Generator {
 		writer.close();
 	}
 
+	public void genpara() {
+		writer.println("ws2s;\n");
+		genfuncconfig("Configuration_A", "C", unfused, unfused.parallel.get(0));
+		writer.println();
+		genfuncconfig("Configuration_B", "D", unfused, unfused.parallel.get(1));
+		writer.println();
+		writer.close();
+	}
+
+	public void genfuncconfig(String configname, String p, RetreetExtractor extractor, String funcid) {
+		List<String> funcs = new LinkedList<String>(extractor.getFuncs());
+		Map<String, Block> rblocks = new LinkedHashMap<String, Block>(extractor.getRdcdBlocks());
+		List<String> rblocklist = new LinkedList<String>(extractor.getRdcdBlocklist());
+		Set<String> calls = new HashSet<String>(extractor.getCalls());
+		Set<String> rnoncalls = new HashSet<String>(extractor.getRdcdNoncalls());
+		Map<String, List<String>> rfuncBlock = new LinkedHashMap<String, List<String>>(extractor.getRdcdFuncBlock());
+		List<String> ortmp = new LinkedList<String>();
+		List<String> andtmp = new LinkedList<String>();
+		List<String> innerandtmp = new LinkedList<String>();
+
+		Map<String, Set<String>> callmap = extractor.getCallMap();
+		// calls.removeAll(rfuncBlock.get("main"));
+		// calls.add(funcid);
+		// rnoncalls.removeAll(rfuncBlock.get("main"));
+		// rblocklist.removeAll(rfuncBlock.get("main"));
+		// rblocklist.add(funcid);
+		// funcs.remove("main");
+		for (String func : extractor.getFuncs()) {
+			String funcname = rblocks.get(funcid).getCallname();
+			if (!callmap.get(funcname).contains(func)) {
+				calls.removeAll(rfuncBlock.get(func));
+				rnoncalls.removeAll(rfuncBlock.get(func));
+				rblocklist.removeAll(rfuncBlock.get(func));
+				funcs.remove(func);
+			}
+		}
+		calls.add(funcid);
+		rblocklist.add(funcid);
+
+		String v = "x";
+		// first the predicate signature
+		writer.print("pred " + configname + "(var1 " + v + ", var2 ");
+		writer.print(genarglist(p, v, rblocklist, false));
+		writer.println(") = ");
+
+		// root should be in main block
+		writer.println("\t(root in " + l(p, funcid, v) + ")");
+
+		// other nodes should not in blocks of main function
+		writer.println("\t& ~(ex1 v where v ~= root: v in " + l(p, funcid, v) + ")");
+
+		// non-leaf nodes should be calls, first consider the special case: main function, then call in calls
+		writer.println("\t& (all1 u where u ~= x: (");
+		writer.print("\t\t\t");
+		// for (String id : rfuncBlock.get("main")) {
+		// 	// for every block b in blocks of func
+		// 	if (calls.contains(id)) {
+		// 		// check if b is also in calls, which means b is a call block
+		// 		List<String> callseq = rblocks.get(id).callseq;
+		// 		String seq = "";
+		// 		for (int i = 0; i < callseq.size(); i++) {
+		// 			if (i == 0) {
+		// 				// assume all calls work on the same node. Maybe TODO later.
+		// 				seq = seq + "u";
+		// 			} else {
+		// 				if (callseq.get(i).equals("left")) {
+		// 					seq = seq + ".0";
+		// 				} else if (callseq.get(i).equals("right")) {
+		// 					seq = seq + ".1";
+		// 				}
+		// 			}
+		// 		}
+		// 		ortmp.add(seq + " in " + l(p, id, v));
+		// 	}
+		// }
+		// andtmp.add("(u in " + l(p, "main", v) + " => " + "(" + getOr(ortmp, "", false) + ") )");
+		// ortmp.clear();
+		for (String callid : calls) {
+			// node u is in a call block implies that
+			// there are nodes (u itself or u.0, u.1 ...) in the blocks of the called function
+			String funcname = rblocks.get(callid).getCallname();
+			for (String id : rfuncBlock.get(funcname)) {
+				// for every block b in blocks of func
+				if (calls.contains(id)) {
+					// check if b is also in calls, which means b is a call block
+					List<String> callseq = rblocks.get(id).callseq;
+					String seq = "";
+					for (int i = 0; i < callseq.size(); i++) {
+						if (i == 0) {
+							// assume all calls work on the same node. Maybe TODO later.
+							seq = seq + "u";
+						} else {
+							if (callseq.get(i).equals("left")) {
+								seq = seq + ".0";
+							} else if (callseq.get(i).equals("right")) {
+								seq = seq + ".1";
+							}
+						}
+					}
+					ortmp.add(seq + " in " + l(p, id, v));
+				}
+			}
+			andtmp.add("(u in " + l(p, callid, v) + " => " + "(" + getOr(ortmp, "", false) + ") )");
+			ortmp.clear();
+		}
+		writer.print(getAnd(andtmp, "\t\t\t", true));
+		andtmp.clear();
+		writer.println("\n\t\t\t)\n\t\t)");
+
+		// if x is in a call, then x should be in one and only one of noncall blocks that correspond to that call
+		// for every call in calls
+		// find out the function that the call belongs to
+		// find out the noncalls in that function
+		// x should be in one of the noncalls.
+		writer.print("\t& (");
+		List<String> ncinfunc = new LinkedList<String>();
+		for (String id : rfuncBlock.get("main")) {
+			if (rnoncalls.contains(id)) {
+				ncinfunc.add(id);
+			}
+		}
+		for (int i = 0; i < ncinfunc.size(); i++) {
+			innerandtmp.add(v + " in " + l(p, ncinfunc.get(i), v));
+			for (int j = 0; j < ncinfunc.size(); j++) {
+				if (i != j) {
+					innerandtmp.add(v + " notin " + l(p, ncinfunc.get(j), v));
+				}
+			}
+			ortmp.add("(" + getAnd(innerandtmp, "", false) + ")");
+			innerandtmp.clear();
+		}
+		if (ncinfunc.size() > 0) {
+			andtmp.add("(" + v + " in " + l(p, "main", v) + " => " + getOr(ortmp, "", false) + ")");
+		}
+		ncinfunc.clear();
+		ortmp.clear();
+		for (String callid : calls) {
+			String funcname = rblocks.get(callid).getCallname();
+			for (String id : rfuncBlock.get(funcname)) {
+				if (rnoncalls.contains(id)) {
+					ncinfunc.add(id);
+				}
+			}
+			for (int i = 0; i < ncinfunc.size(); i++) {
+				innerandtmp.add(v + " in " + l(p, ncinfunc.get(i), v));
+				for (int j = 0; j < ncinfunc.size(); j++) {
+					if (i != j) {
+						innerandtmp.add(v + " notin " + l(p, ncinfunc.get(j), v));
+					}
+				}
+				ortmp.add("(" + getAnd(innerandtmp, "", false) + ")");
+				innerandtmp.clear();
+			}
+			ncinfunc.clear();
+			andtmp.add("(" + v + " in " + l(p, callid, v) + " => " + getOr(ortmp, "", false) + ")");
+			ortmp.clear();
+		}
+		writer.print(getAnd(andtmp, "\t\t", true));
+		andtmp.clear();
+		writer.println("\n\t\t)");
+
+		// for node v which is not x, v should not in any of noncall blocks
+		writer.println("\t& (all1 v where v ~= x:");
+		for (String noncallid : rnoncalls) {
+			andtmp.add("v notin " + l(p, noncallid, v));
+		}
+		writer.print("\t\t(");
+		writer.print(getAnd(andtmp, "", false));
+		andtmp.clear();
+		writer.print(")");
+		writer.println("\n\t\t)");
+
+		// if x is in one of noncall blocks, then x is not in any other noncall block
+		if (rnoncalls.size() > 1) {
+			writer.print("\t& (");
+			for (String i : rnoncalls) {
+				for (String j : rnoncalls) {
+					if (!i.equals(j)) {
+						innerandtmp.add(v + " notin " + l(p, j, v));
+					}
+
+				}
+				andtmp.add("(" + v + " in " + l(p, i, v) + " => (" + getAnd(innerandtmp, "", false) + "))");
+				innerandtmp.clear();
+			}
+			writer.print(getAnd(andtmp, "\t\t", true));
+			andtmp.clear();
+			writer.println("\n\t\t)");
+		}
+		
+		// for node z which is not root, 
+		// if z is in call block that is calling on children nodes, 
+		// then there exist w where w is the parent of z
+		writer.println("\t& (all1 z where z ~= root:");
+		// for every call in calls, find out their corresponding block
+		// check if the call is calling on child node
+		// convert the callseq to "0" or "1" ...
+		for (String callid : calls) {
+			List<String> callseq = rblocks.get(callid).callseq;
+			if (callseq.size() > 1) {
+				String seq = "";
+				for (int i = 1; i < callseq.size(); i++) {
+					if (callseq.get(i).equals("left")) {
+						seq = seq + ".0";
+					} else if (callseq.get(i).equals("right")) {
+						seq = seq + ".1";
+					}
+				}
+				String zinLabel = "z in " + l(p, callid, v);
+				andtmp.add("(" + zinLabel + " => ex1 w: w" + seq + " = z)");
+			}
+		}
+		writer.print("\t\t");
+		writer.print(getAnd(andtmp, "\t\t", true));
+		andtmp.clear();
+		writer.print("\n\t\t)");
+
+		// configuration comes to an end
+		writer.println(";");
+
+	}
+
 	// generate configuration predicate 
 	public void genconfig(String configname, String p, RetreetExtractor extractor) {
 		List<String> funcs = extractor.getFuncs();
@@ -116,7 +345,7 @@ public class Generator {
 		String v = "x";
 		// first the predicate signature
 		writer.print("pred " + configname + "(var1 " + v + ", var2 ");
-		writer.print(genarglist(p, v, rblocklist));
+		writer.print(genarglist(p, v, rblocklist, true));
 		writer.println(") = ");
 
 		// root should be in main block
@@ -280,20 +509,22 @@ public class Generator {
 		writer.println("\n\t\t)");
 
 		// if x is in one of noncall blocks, then x is not in any other noncall block
-		writer.print("\t& (");
-		for (String i : rnoncalls) {
-			for (String j : rnoncalls) {
-				if (!i.equals(j)) {
-					innerandtmp.add(v + " notin " + l(p, j, v));
-				}
+		if (rnoncalls.size() > 1) {
+			writer.print("\t& (");
+			for (String i : rnoncalls) {
+				for (String j : rnoncalls) {
+					if (!i.equals(j)) {
+						innerandtmp.add(v + " notin " + l(p, j, v));
+					}
 
+				}
+				andtmp.add("(" + v + " in " + l(p, i, v) + " => (" + getAnd(innerandtmp, "", false) + "))");
+				innerandtmp.clear();
 			}
-			andtmp.add("(" + v + " in " + l(p, i, v) + " => (" + getAnd(innerandtmp, "", false) + "))");
-			innerandtmp.clear();
+			writer.print(getAnd(andtmp, "\t\t", true));
+			andtmp.clear();
+			writer.println("\n\t\t)");
 		}
-		writer.print(getAnd(andtmp, "\t\t", true));
-		andtmp.clear();
-		writer.println("\n\t\t)");
 
 		// for node z which is not root, 
 		// if z is in call block that is calling on children nodes, 
@@ -343,9 +574,9 @@ public class Generator {
 
 		// first the predicate signature
 		writer.print("pred " + ordername + "(var1 " + x + ", " + y + ", var2 ");
-		writer.print(genarglist(p, x, rblocklist));
+		writer.print(genarglist(p, x, rblocklist, true));
 		writer.print(", ");
-		writer.print(genarglist(p, y, rblocklist));
+		writer.print(genarglist(p, y, rblocklist, true));
 		writer.println(") = ");
 
 		// the labels for x and y should not be exactly the same
@@ -357,8 +588,8 @@ public class Generator {
 		andtmp.clear();
 
 		// labels for x and y should be valid configurations
-		writer.println("\t& " + configname + "(" + x + ", " + genarglist(p, x, rblocklist) + ")");
-		writer.println("\t& " + configname + "(" + y + ", " + genarglist(p, y, rblocklist) + ")");
+		writer.println("\t& " + configname + "(" + x + ", " + genarglist(p, x, rblocklist, true) + ")");
+		writer.println("\t& " + configname + "(" + y + ", " + genarglist(p, y, rblocklist, true) + ")");
 
 		// exists a node z which precede x and y in the tree, such that
 			// every node v precede z, v in labels of x <=> v in labels of y
@@ -501,13 +732,13 @@ public class Generator {
 
 		// first the predicate signature
 		writer.print("pred Dependence(var1 " + x + ", " + y + ", var2 ");
-		writer.print(genarglist(p, x, rblocklist));
+		writer.print(genarglist(p, x, rblocklist, true));
 		writer.print(", ");
-		writer.print(genarglist(p, y, rblocklist));
+		writer.print(genarglist(p, y, rblocklist, true));
 		writer.println(") = ");
 
 		// x y should be ordered
-		writer.println("\t" + ordername + "(" + x + ", " + y + ", " + genarglist(p, x, rblocklist) + ", " + genarglist(p, y, rblocklist) + ")");
+		writer.println("\t" + ordername + "(" + x + ", " + y + ", " + genarglist(p, x, rblocklist, true) + ", " + genarglist(p, y, rblocklist, true) + ")");
 
 		// list the dependence
 		// for every noncall block, find out the write set
@@ -611,9 +842,9 @@ public class Generator {
 
 		// first the predicate signature
 		writer.print("pred Convert(var2 ");
-		writer.print(genarglist(pu, x, ufblck));
+		writer.print(genarglist(pu, x, ufblck, true));
 		writer.print(", ");
-		writer.print(genarglist(pf, x, fblck));
+		writer.print(genarglist(pf, x, fblck, true));
 		writer.println(") = ");
 
 		// then for all node u, if u is in an unfused block, u should be in the corresponding fused block, and vice versa
@@ -655,45 +886,45 @@ public class Generator {
 
 		// declare var2
 		writer.print("var2 ");
-		writer.print(genarglist(pu, x, ufblck));
+		writer.print(genarglist(pu, x, ufblck, true));
 		writer.print(", ");
-		writer.print(genarglist(pu, y, ufblck));
+		writer.print(genarglist(pu, y, ufblck, true));
 		writer.print(", ");
-		writer.print(genarglist(pf, x, fblck));
+		writer.print(genarglist(pf, x, fblck, true));
 		writer.print(", ");
-		writer.print(genarglist(pf, y, fblck));
+		writer.print(genarglist(pf, y, fblck, true));
 		writer.println(";");
 		writer.println();
 
 		// fusedordered y x
 		writer.print(fusedorder + "(" + y + ", " + x + ", ");
-		writer.print(genarglist(pf, y, fblck));
+		writer.print(genarglist(pf, y, fblck, true));
 		writer.print(", ");
-		writer.print(genarglist(pf, x, fblck));
+		writer.print(genarglist(pf, x, fblck, true));
 		writer.println(");");
 		writer.println();
 
 		// dependence x y
 		writer.print("Dependence(" + x + ", " + y + ", ");
-		writer.print(genarglist(pu, x, ufblck));
+		writer.print(genarglist(pu, x, ufblck, true));
 		writer.print(", ");
-		writer.print(genarglist(pu, y, ufblck));
+		writer.print(genarglist(pu, y, ufblck, true));
 		writer.println(");");
 		writer.println();
 
 		// convert labels of x from unfused to fused blocks
 		writer.print("Convert(");
-		writer.print(genarglist(pu, x, ufblck));
+		writer.print(genarglist(pu, x, ufblck, true));
 		writer.print(", ");
-		writer.print(genarglist(pf, x, fblck));
+		writer.print(genarglist(pf, x, fblck, true));
 		writer.println(");");
 		writer.println();
 
 		// convert labels of x from unfused to fused blocks
 		writer.print("Convert(");
-		writer.print(genarglist(pu, y, ufblck));
+		writer.print(genarglist(pu, y, ufblck, true));
 		writer.print(", ");
-		writer.print(genarglist(pf, y, fblck));
+		writer.print(genarglist(pf, y, fblck, true));
 		writer.println(");");
 		writer.println();
 
