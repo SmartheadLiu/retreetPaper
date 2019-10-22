@@ -1,0 +1,19 @@
+main(n){
+    fusedmutation(n);   // 0
+}
+
+fusedmutation(n){
+    if(n == nil){
+        return;                     // 1
+    }
+    else{
+        fusedmutation(n.left);      // 2
+        fusedmutation(n.right);     // 3
+        n.ll = 0;
+        n.lr = 1;
+        n.rr = 0;
+        n.rl = 1;
+        n.v = n.s + 1;              // 4
+        n.v = n.right.v + 1;            // 5
+    }
+}
