@@ -19,6 +19,7 @@ public class RetreetExtractor extends RetreetBaseListener {
 
     Map<String, List<String>> sequential = new LinkedHashMap<String, List<String>>();// TODO: to complete in the future
     List<String> parallel = new LinkedList<String>(); // parallelization only happens in main function
+    Map<String, List<String>> funcsInFunc = new LinkedHashMap<String, List<String>>();
 
     List<String> locseq = new LinkedList<String>();		// the location sequence of a lexpr, the first element is the node, the rest of elements are pointers
 
@@ -129,6 +130,46 @@ public class RetreetExtractor extends RetreetBaseListener {
             }
             rfuncBlock.put(func, blocksInFunc);
         }
+        // for every function, collect the functions that this function call inside
+        for (String func : funcs) {
+            List<String> blocksInFunc = funcBlock.get(func);
+            List<String> funcInFunc = new LinkedList<String>();
+            for (String blockid : blocksInFunc) {
+                Block block = blocks.get(blockid);
+                if (block.getCallFlag()) {
+                    funcInFunc.add(block.getCallname());
+                }
+            }
+            funcsInFunc.put(func, funcInFunc); 
+        }
+    }
+
+    public Map<String, Set<String>> getCallMap() {
+        Map<String, Set<String>> callmap = new LinkedHashMap<String, Set<String>>();
+        for (String func : funcs) {
+            Set<String> called = new HashSet<String>();
+            called.addAll(funcsInFunc.get(func));
+            int oldlength = called.size();
+            int newlength = 0;
+            while(oldlength != newlength) {
+                oldlength = called.size();
+                Set<String> calledcopy = new HashSet<String>();
+                calledcopy.addAll(called);
+                for (String f : calledcopy) {
+                    for (String c : funcsInFunc.get(f)) {
+                        if (!called.contains(c)) {
+                            called.add(c);
+                        }
+                    }
+
+                }
+                newlength = called.size();
+            }
+            // include itself
+            called.add(func);
+            callmap.put(func, called);
+        }
+        return callmap;
     }
 
     public void enterMain(RetreetParser.MainContext ctx) {
