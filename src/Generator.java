@@ -238,8 +238,10 @@ public class Generator {
 			ortmp.add("(" + getAnd(innerandtmp, "", false) + ")");
 			innerandtmp.clear();
 		}
+		if (ncinfunc.size() > 0) {
+			andtmp.add("(" + v + " in " + l(p, "main", v) + " => " + getOr(ortmp, "", false) + ")");
+		}
 		ncinfunc.clear();
-		andtmp.add("(" + v + " in " + l(p, "main", v) + " => " + getOr(ortmp, "", false) + ")");
 		ortmp.clear();
 		for (String callid : calls) {
 			String funcname = rblocks.get(callid).getCallname();
@@ -420,7 +422,7 @@ public class Generator {
 					// if it's noncall, z should be in the noncall block
 					andtmp.add("(z in " + l(p, seqmain.get(j), y) + ")");
 				}
-				ortmp.add(getAnd(andtmp, "\t\t\t\t", true));
+				ortmp.add("(" + getAnd(andtmp, "\t\t\t\t", true) + ")");
 				andtmp.remove(andtmp.size() - 1);
 			}
 			andtmp.clear();
@@ -467,7 +469,7 @@ public class Generator {
 						// if it's noncall, z should be in the noncall block
 						andtmp.add("(z in " + l(p, seqfunc.get(j), y) + ")");
 					}
-					ortmp.add(getAnd(andtmp, "\t\t\t\t", true));
+					ortmp.add("(" + getAnd(andtmp, "\t\t\t\t", true) + ")");
 					andtmp.remove(andtmp.size() - 1);
 				}
 				andtmp.clear();
