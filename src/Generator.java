@@ -14,14 +14,6 @@ public class Generator {
 	public Generator(String filename, RetreetExtractor unfused) {
 		this.filename = filename;
 		this.unfused = unfused;
-		File file = new File("//Users//yanjunwang//Documents//work//fusion//implementation//output//" + filename + ".mona");
-		// file.getParentFile().mkdirs();
-		try {
-			writer = new PrintWriter(file);
-		} catch (FileNotFoundException fnfe) {
-			System.out.println(fnfe);
-		}
-		
 	}
 
 	public Generator(String filename, RetreetExtractor unfused, RetreetExtractor fused, RetreetExtractor relation) {
@@ -29,14 +21,6 @@ public class Generator {
 		this.unfused = unfused;
 		this.fused = fused;
 		this.relation = relation;
-		File file = new File("//Users//yanjunwang//Documents//work//fusion//implementation//output//" + filename + ".mona");
-		// file.getParentFile().mkdirs();
-		try {
-			writer = new PrintWriter(file);
-		} catch (FileNotFoundException fnfe) {
-			System.out.println(fnfe);
-		}
-		
 	}
 
 	public String getOr(List<String> store, String tabs, boolean newline) {
@@ -72,6 +56,9 @@ public class Generator {
 	}
 
 	public String l(String prefix, String blockid, String varname) {
+		if (blockid.equals("empty_set")) {
+			return "empty_set";
+		}
 		return prefix + blockid + varname;
 	}
 
@@ -99,6 +86,12 @@ public class Generator {
 			genmultfuse();
 		} else {
 			// otherwise, generate one file.
+			File file = new File(filepath + filename + ".mona");
+			try {
+				writer = new PrintWriter(file);
+			} catch (FileNotFoundException fnfe) {
+				System.out.println(fnfe);
+			}
 			writer.println("ws2s;\n");
 			genconfig("Configuration", "C", unfused);
 			writer.println();
@@ -110,7 +103,7 @@ public class Generator {
 			writer.println();
 			gendependence("Ordered", "C", unfused);
 			writer.println();
-			genconvert("C", "D", unfused.getRdcdBlocklist(), fused.getRdcdBlocklist(), relation);
+			genconvert("C", "D", unfused.getRdcdBlocklist(), fused.getRdcdBlocklist(), relation, false);
 			writer.println();
 			genfuseconstraint("OrderedFused", "C", "D", unfused.getRdcdBlocklist(), fused.getRdcdBlocklist());
 			writer.println();
@@ -119,6 +112,12 @@ public class Generator {
 	}
 
 	public void genpara() {
+		File file = new File(filepath + filename + ".mona");
+		try {
+			writer = new PrintWriter(file);
+		} catch (FileNotFoundException fnfe) {
+			System.out.println(fnfe);
+		}
 		writer.println("ws2s;\n");
 		genfuncconfig("Configuration_A", "C", unfused, unfused.parallel.get(0));
 		writer.println();
@@ -1045,7 +1044,7 @@ public class Generator {
 
 	}
 
-	public void genconvert(String pu, String pf, List<String> ufblck, List<String> fblck, RetreetExtractor extractor) {
+	public void genconvert(String pu, String pf, List<String> ufblck, List<String> fblck, RetreetExtractor extractor, boolean funcFlag) {
 		Map<String, List<String>> unfused2fused = extractor.getUnfused2fused();
     	Map<String, List<String>> fused2unfused = extractor.getFused2unfused();
     	List<String> ortmp = new LinkedList<String>();
@@ -1055,29 +1054,51 @@ public class Generator {
 
 		// first the predicate signature
 		writer.print("pred Convert(var2 ");
-		writer.print(genarglist(pu, x, ufblck, true));
+		if (funcFlag) {
+			writer.print(genarglist(pu, x, ufblck, false));
+		} else {
+			writer.print(genarglist(pu, x, ufblck, true));
+		}
 		writer.print(", ");
-		writer.print(genarglist(pf, x, fblck, true));
+		if (funcFlag) {
+			writer.print(genarglist(pf, x, fblck, false));
+		} else {
+			writer.print(genarglist(pf, x, fblck, true));
+		}
 		writer.println(") = ");
 
 		// then for all node u, if u is in an unfused block, u should be in the corresponding fused block, and vice versa
 		writer.println("\t(all1 u:");
 		writer.print("\t\t( ");
-		andtmp.add("(u in " + l(pu, "main", x) + " <=> u in " + l(pf, "main", x) + ")");
+		if (!funcFlag) {
+			andtmp.add("(u in " + l(pu, "main", x) + " <=> u in " + l(pf, "main", x) + ")");
+		}
 		for (String unfusedid : ufblck) {
 			List<String> fusedlist = unfused2fused.get(unfusedid);
 			for (String fusedid : fusedlist) {
-				ortmp.add("u in " + l(pf, fusedid, x));
+				if (fblck.contains(fusedid)) {
+					ortmp.add("u in " + l(pf, fusedid, x));
+				}
 			}
-			andtmp.add("(u in " + l(pu, unfusedid, x) + " => (" + getOr(ortmp, "", false) + "))");
+			if (!ortmp.isEmpty()) {
+				andtmp.add("(u in " + l(pu, unfusedid, x) + " => (" + getOr(ortmp, "", false) + "))");
+			} else {
+				andtmp.add("~(u in " + l(pu, unfusedid, x) + ")");
+			}
 			ortmp.clear();
 		}
 		for (String fusedid : fblck) {
 			List<String> unfusedlist = fused2unfused.get(fusedid);
 			for (String unfusedid : unfusedlist) {
-				ortmp.add("u in " + l(pu, unfusedid, x));
+				if (ufblck.contains(unfusedid)) {
+					ortmp.add("u in " + l(pu, unfusedid, x));
+				}
 			}
-			andtmp.add("(u in " + l(pf, fusedid, x) + " => (" + getOr(ortmp, "", false) + "))");
+			if (!ortmp.isEmpty()) {
+				andtmp.add("(u in " + l(pf, fusedid, x) + " => (" + getOr(ortmp, "", false) + "))");
+			} else {
+				andtmp.add("~(u in " + l(pf, fusedid, x) + ")");
+			}
 			ortmp.clear();
 		}
 		writer.print(getAnd(andtmp, "\t\t", true));
@@ -1157,12 +1178,51 @@ public class Generator {
 		return p1rblocklist;
 	}
 
+	public List<String> getFuncNCblocklist(String funcname, RetreetExtractor extractor) {
+		List<String> nclist = new LinkedList<String>();
+		Map<String, Set<String>> callmap = extractor.getCallMap();
+		for(String func : callmap.get(funcname)) {
+			for (String block : extractor.rfuncBlock.get(func)) {
+				if (extractor.rnoncalls.contains(block)) {
+					nclist.add(block);
+				}
+			}
+		}
+		return nclist;
+	}
+
+	public List<String> genNCCrrspList(List<String> blocklist, RetreetExtractor relation, boolean uf2f) {
+		List<String> crrlist = new LinkedList<String>();
+		if (uf2f) {
+			Map<String, List<String>> unfused2fused = relation.getUnfused2fused();
+			for (String blockid : blocklist) {
+				crrlist.addAll(unfused2fused.get(blockid));
+			}
+		} else {
+			Map<String, List<String>> fused2unfused = relation.getFused2unfused();
+			for (String blockid : blocklist) {
+				crrlist.addAll(fused2unfused.get(blockid));
+			}
+		}
+		return crrlist;
+	}
+
+	public List<String> genRplist(List<String> original, List<String> replace) {
+		List<String> newlist = new LinkedList<String>(original);
+		for (int i = 0; i < newlist.size(); i++) {
+			if (replace.contains(newlist.get(i))) {
+				newlist.set(i, "empty_set");
+			}
+		}
+		return newlist;
+	}
+
 	public void gendiffordered(String ordered, String config1, String config2, String p, RetreetExtractor extractor, String func1, String func2) {
 		String x = "x";
 		String y = "y";
 
 		// pred signature
-		writer.print("pred " + ordered + "(var1 " + x + ", " + y + " var2 ");
+		writer.print("pred " + ordered + "(var1 " + x + ", " + y + ", var2 ");
 		writer.print(genarglist(p, x, getFuncblocklist(func1, extractor), false));
 		writer.print(", ");
 		writer.print(genarglist(p, y, getFuncblocklist(func2, extractor), false));
@@ -1181,15 +1241,95 @@ public class Generator {
 		writer.println("\t;");
 	}
 
+	public void gendifffuseconstr(String fusedorder, String ordered, String pu, String pf, String func1, String func2) {
+		String x = "x";
+		String y = "y";
+		List<String> f1blck = getFuncblocklist(func1, unfused);
+		List<String> f2blck = getFuncblocklist(func2, unfused);
+		List<String> fblck = new LinkedList<String>(fused.rblocklist);
+		List<String> f1nclist = getFuncNCblocklist(unfused.rblocks.get(func1).getCallname(), unfused);
+		List<String> f2nclist = getFuncNCblocklist(unfused.rblocks.get(func2).getCallname(), unfused);
+		List<String> f1ncCrrsplist = genNCCrrspList(f1nclist, relation, true);
+		List<String> f2ncCrrsplist = genNCCrrspList(f2nclist, relation, true);
+
+		// declare var1 x, y first
+		writer.println("var1 " + x + ", " + y + ";");
+		writer.println();
+
+		// declare var2
+		writer.print("var2 empty_set, ");
+		writer.print(genarglist(pu, x, f1blck, false));
+		writer.print(", ");
+		writer.print(genarglist(pu, y, f2blck, false));
+		writer.print(", ");
+		List<String> fvars = new LinkedList<String>(fblck);
+		fvars.removeAll(f1ncCrrsplist);
+		writer.print(genarglist(pf, y, fvars, true));
+		writer.print(", " + l(pu, "main", x));
+		writer.println(";");
+		writer.println();
+
+		// define empty_set
+		writer.println("all1 u: ~(u in empty_set);");
+		writer.println();
+
+		// fusedordered y x
+		writer.print(fusedorder + "(" + y + ", " + x + ", ");
+		fvars = genRplist(fblck, f1ncCrrsplist);
+		writer.print(genarglist(pf, y, fvars, true));
+		writer.print(", ");
+		fvars = new LinkedList<String>(fblck);
+		for (int i = 0; i < fvars.size(); i++) {
+			List<String> tmplist = new LinkedList<String>();
+			tmplist.add(fvars.get(i));
+			fvars.set(i, genNCCrrspList(tmplist, relation, false).get(0));
+		}
+		fvars = genRplist(fvars, f2nclist);
+		writer.print(genarglist(pu, x, fvars, true));
+		writer.println(");");
+		writer.println();
+
+		// ordered x y
+		writer.print(ordered + "(" + x + ", " + y + ", ");
+		writer.print(genarglist(pu, x, f1blck, false));
+		writer.print(", ");
+		writer.print(genarglist(pu, y, f2blck, false));
+		writer.println(");");
+		writer.println();
+
+		// dependence x y
+		writer.print("Dependence(" + x + ", " + y + ", ");
+		writer.print(genarglist(pu, x, f1blck, false));
+		writer.print(", ");
+		writer.print(genarglist(pu, y, f2blck, false));
+		writer.println(");");
+		writer.println();
+
+		writer.print("Convert(");
+		writer.print(genarglist(pu, y, f2blck, false));
+		writer.print(", ");
+		fvars = genRplist(fblck, f1ncCrrsplist);
+		writer.print(genarglist(pf, y, fvars, false));
+		writer.println(");");
+		writer.println();
+
+	}
+
 	public void genmultfuse() {
 		// there are 3 cases
-
-		// x and y in different traversal
-		writer.println("ws2s;\n");
 		String func1 = unfused.rfuncBlock.get("main").get(0);	// block id
 		String func2 = unfused.rfuncBlock.get("main").get(1);
 		String func1config = "Configuration_" + unfused.rblocks.get(func1).getCallname();
 		String func2config = "Configuration_" + unfused.rblocks.get(func2).getCallname();
+
+		// x and y in different traversal
+		File file = new File(filepath + filename + "_1.mona");
+		try {
+			writer = new PrintWriter(file);
+		} catch (FileNotFoundException fnfe) {
+			System.out.println(fnfe);
+		}
+		writer.println("ws2s;\n");
 		genfuncconfig(func1config, "C", unfused, func1);
 		writer.println();
 		genfuncconfig(func2config, "C", unfused, func2);
@@ -1200,18 +1340,34 @@ public class Generator {
 		writer.println();
 		genordered("OrderedFused", "ConfigurationFused", "D", fused);
 		writer.println();
-		genParaDependence("C", "D", unfused, func1, func2);
+		genParaDependence("C", "C", unfused, func1, func2);
 		writer.println();
-		genconvert("C", "D", getFuncblocklist(func2, unfused), fused.getRdcdBlocklist(), relation);
+		genconvert("C", "D", getFuncblocklist(func2, unfused), fused.getRdcdBlocklist(), relation, true);
+		writer.println();
+		gendifffuseconstr("OrderedFused", "Ordered", "C", "D", func1, func2);
+		writer.println();
+		writer.close();
+
+		// both x and y in the fisrt traversal
+		file = new File(filepath + filename + "_2.mona");
+		try {
+			writer = new PrintWriter(file);
+		} catch (FileNotFoundException fnfe) {
+			System.out.println(fnfe);
+		}
+		writer.println("ws2s;\n");
+		genfuncconfig(func1config, "C", unfused, func1);
+		writer.println();
+		genconfig("ConfigurationFused", "D", fused);
+		writer.println();
+		// ordered missing
+		genordered("OrderedFused", "ConfigurationFused", "D", fused);
+		writer.println();
+		genParaDependence("C", "C", unfused, func1, func1);
 		writer.println();
 
 
 		writer.close();
-
-		// both x and y in the fisrt traversal
-
-
-
 		// both x and y in the second traversal
 
 	}
