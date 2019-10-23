@@ -77,7 +77,10 @@ public class Retreet {
             RetreetExtractor relationlistener = new RetreetExtractor();
             relationwalker.walk(relationlistener, relationtree);
 
-            Generator generator = new Generator("cycletree", unfusedlistener, fusedlistener, relationlistener);
+            File file = new File(args[1]);
+            String filename = file.getName();
+            filename = filename.substring(0, filename.indexOf("."));
+            Generator generator = new Generator("fuse_" + filename, unfusedlistener, fusedlistener, relationlistener);
             generator.genfuse();
 
         } else if (args[0].equals("parallel")) {
@@ -91,17 +94,15 @@ public class Retreet {
             CommonTokenStream tokens = new CommonTokenStream(lexer);
             RetreetParser parser = new RetreetParser(tokens);
 
-            Logger logger = Logger.getLogger("main");
-
             ANTLRErrorStrategy es = new CustomErrorStrategy();
             parser.setErrorHandler(es);
 
             ParseTree tree = null;
             try{
                 tree = parser.prog();
-                logger.info("Accepted");
+                System.out.println("Accepted");
             } catch(Exception ex) {
-                logger.info("Not Accepted");
+                System.out.println("Not Accepted");
                 return;
             }
 
@@ -109,10 +110,14 @@ public class Retreet {
             RetreetExtractor listener = new RetreetExtractor();
             walker.walk(listener, tree);
 
-            Generator generator = new Generator("parallel", listener);
+            File file = new File(args[1]);
+            String filename = file.getName();
+            filename = filename.substring(0, filename.indexOf("."));
+            Generator generator = new Generator(filename, listener);
             generator.genpara();
 
         } else {
+            // debug area
             File file = new File(args[0]);
             String filename = file.getName();
             System.out.println("Filename: " + filename.substring(0, filename.indexOf(".")));
