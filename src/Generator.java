@@ -8,8 +8,10 @@ public class Generator {
 	RetreetExtractor fused;
 	RetreetExtractor relation;
 	PrintWriter writer;
+	String filename;
 
 	public Generator(String filename, RetreetExtractor unfused) {
+		this.filename = filename;
 		this.unfused = unfused;
 		File file = new File("//Users//yanjunwang//Documents//work//fusion//implementation//output//" + filename + ".mona");
 		// file.getParentFile().mkdirs();
@@ -22,6 +24,7 @@ public class Generator {
 	}
 
 	public Generator(String filename, RetreetExtractor unfused, RetreetExtractor fused, RetreetExtractor relation) {
+		this.filename = filename;
 		this.unfused = unfused;
 		this.fused = fused;
 		this.relation = relation;
@@ -90,22 +93,28 @@ public class Generator {
 
 	// generate mona file that checks the validity of fusion.
 	public void genfuse() {
-		writer.println("ws2s;\n");
-		genconfig("Configuration", "C", unfused);
-		writer.println();
-		genconfig("ConfigurationFused", "D", fused);
-		writer.println();
-		genordered("Ordered", "Configuration", "C", unfused);
-		writer.println();
-		genordered("OrderedFused", "ConfigurationFused", "D", fused);
-		writer.println();
-		gendependence("Ordered", "C", unfused);
-		writer.println();
-		genconvert("C", "D", unfused.getRdcdBlocklist(), fused.getRdcdBlocklist(), relation);
-		writer.println();
-		genfuseconstraint("OrderedFused", "C", "D", unfused.getRdcdBlocklist(), fused.getRdcdBlocklist());
-		writer.println();
-		writer.close();
+		if (unfused.funcs.size() > 4) {
+			// if there are many traversals to be fused, split disjuncts, generate several mona files
+			genmultfuse();
+		} else {
+			// otherwise, generate one file.
+			writer.println("ws2s;\n");
+			genconfig("Configuration", "C", unfused);
+			writer.println();
+			genconfig("ConfigurationFused", "D", fused);
+			writer.println();
+			genordered("Ordered", "Configuration", "C", unfused);
+			writer.println();
+			genordered("OrderedFused", "ConfigurationFused", "D", fused);
+			writer.println();
+			gendependence("Ordered", "C", unfused);
+			writer.println();
+			genconvert("C", "D", unfused.getRdcdBlocklist(), fused.getRdcdBlocklist(), relation);
+			writer.println();
+			genfuseconstraint("OrderedFused", "C", "D", unfused.getRdcdBlocklist(), fused.getRdcdBlocklist());
+			writer.println();
+			writer.close();
+		}
 	}
 
 	public void genpara() {
@@ -1132,5 +1141,10 @@ public class Generator {
 		writer.println();
 
 	}
+
+	public void genmultfuse() {
+		
+	}
+
 
 }	
