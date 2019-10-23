@@ -9,6 +9,7 @@ public class Generator {
 	RetreetExtractor relation;
 	PrintWriter writer;
 	String filename;
+	String filepath = "//Users//yanjunwang//Documents//work//fusion//implementation//output//";
 
 	public Generator(String filename, RetreetExtractor unfused) {
 		this.filename = filename;
@@ -1142,8 +1143,77 @@ public class Generator {
 
 	}
 
+	public List<String> getFuncblocklist(String blockid, RetreetExtractor extractor) {
+		// blocks that will be used when calling this function
+		Map<String, Set<String>> callmap = extractor.getCallMap();
+		List<String> p1rblocklist = new LinkedList<String>(extractor.getRdcdBlocklist());
+		for (String func : extractor.getFuncs()) {
+			String funcname = extractor.getRdcdBlocks().get(blockid).getCallname();
+			if (!callmap.get(funcname).contains(func)) {
+				p1rblocklist.removeAll(extractor.getRdcdFuncBlock().get(func));
+			}
+		}
+		p1rblocklist.add(blockid);
+		return p1rblocklist;
+	}
+
+	public void gendiffordered(String ordered, String config1, String config2, String p, RetreetExtractor extractor, String func1, String func2) {
+		String x = "x";
+		String y = "y";
+
+		// pred signature
+		writer.print("pred " + ordered + "(var1 " + x + ", " + y + " var2 ");
+		writer.print(genarglist(p, x, getFuncblocklist(func1, extractor), false));
+		writer.print(", ");
+		writer.print(genarglist(p, y, getFuncblocklist(func2, extractor), false));
+		writer.println(") = ");
+
+		// x in func1
+		writer.print("\t" + config1 + "(" + x + ", ");
+		writer.print(genarglist(p, x, getFuncblocklist(func1, extractor), false));
+		writer.println(")");
+
+		// y in func2
+		writer.print("\t& " + config2 + "(" + y + ", ");
+		writer.print(genarglist(p, y, getFuncblocklist(func2, extractor), false));
+		writer.println(")");
+
+		writer.println("\t;");
+	}
+
 	public void genmultfuse() {
-		
+		// there are 3 cases
+
+		// x and y in different traversal
+		writer.println("ws2s;\n");
+		String func1 = unfused.rfuncBlock.get("main").get(0);	// block id
+		String func2 = unfused.rfuncBlock.get("main").get(1);
+		String func1config = "Configuration_" + unfused.rblocks.get(func1).getCallname();
+		String func2config = "Configuration_" + unfused.rblocks.get(func2).getCallname();
+		genfuncconfig(func1config, "C", unfused, func1);
+		writer.println();
+		genfuncconfig(func2config, "C", unfused, func2);
+		writer.println();
+		genconfig("ConfigurationFused", "D", fused);
+		writer.println();
+		gendiffordered("Ordered", func1config, func2config, "C", unfused, func1, func2);
+		writer.println();
+		genordered("OrderedFused", "ConfigurationFused", "D", fused);
+		writer.println();
+		genParaDependence("C", "D", unfused, func1, func2);
+		writer.println();
+		genconvert("C", "D", getFuncblocklist(func2, unfused), fused.getRdcdBlocklist(), relation);
+		writer.println();
+
+
+		writer.close();
+
+		// both x and y in the fisrt traversal
+
+
+
+		// both x and y in the second traversal
+
 	}
 
 
