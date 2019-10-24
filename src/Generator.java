@@ -9,7 +9,8 @@ public class Generator {
 	RetreetExtractor relation;
 	PrintWriter writer;
 	String filename;
-	String filepath = "//Users//yanjunwang//Documents//work//fusion//implementation//output//";
+	// String filepath = "//Users//yanjunwang//Documents//work//fusion//implementation//output//";
+	String filepath = "";
 
 	public Generator(String filename, RetreetExtractor unfused) {
 		this.filename = filename;
