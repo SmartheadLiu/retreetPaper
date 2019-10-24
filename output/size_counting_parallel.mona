@@ -1,0 +1,82 @@
+ws2s;
+
+pred Configuration_A(var1 x, var2 C4x, C5x, C6x, C8x, C9x, C10x, C0x) = 
+	(root in C0x)
+	& ~(ex1 v where v ~= root: v in C0x)
+	& (all1 u where u ~= x: (
+			(u in C0x => (u.0 in C4x | u.1 in C5x) )
+			& (u in C4x => (u.0 in C8x | u.1 in C9x) )
+			& (u in C5x => (u.0 in C8x | u.1 in C9x) )
+			& (u in C8x => (u.0 in C4x | u.1 in C5x) )
+			& (u in C9x => (u.0 in C4x | u.1 in C5x) )
+			)
+		)
+	& ((x in C0x => (x in C6x))
+		& (x in C4x => (x in C10x))
+		& (x in C5x => (x in C10x))
+		& (x in C8x => (x in C6x))
+		& (x in C9x => (x in C6x))
+		)
+	& (all1 v where v ~= x:
+		(v notin C6x & v notin C10x)
+		)
+	& ((x in C6x => (x notin C10x))
+		& (x in C10x => (x notin C6x))
+		)
+	& (all1 z where z ~= root:
+		(z in C4x => ex1 w: w.0 = z)
+		& (z in C5x => ex1 w: w.1 = z)
+		& (z in C8x => ex1 w: w.0 = z)
+		& (z in C9x => ex1 w: w.1 = z)
+		);
+
+pred Configuration_B(var1 x, var2 D4x, D5x, D6x, D8x, D9x, D10x, D1x) = 
+	(root in D1x)
+	& ~(ex1 v where v ~= root: v in D1x)
+	& (all1 u where u ~= x: (
+			(u in D1x => (u.0 in D8x | u.1 in D9x) )
+			& (u in D4x => (u.0 in D8x | u.1 in D9x) )
+			& (u in D5x => (u.0 in D8x | u.1 in D9x) )
+			& (u in D8x => (u.0 in D4x | u.1 in D5x) )
+			& (u in D9x => (u.0 in D4x | u.1 in D5x) )
+			)
+		)
+	& ((x in D1x => (x in D10x))
+		& (x in D4x => (x in D10x))
+		& (x in D5x => (x in D10x))
+		& (x in D8x => (x in D6x))
+		& (x in D9x => (x in D6x))
+		)
+	& (all1 v where v ~= x:
+		(v notin D6x & v notin D10x)
+		)
+	& ((x in D6x => (x notin D10x))
+		& (x in D10x => (x notin D6x))
+		)
+	& (all1 z where z ~= root:
+		(z in D4x => ex1 w: w.0 = z)
+		& (z in D5x => ex1 w: w.1 = z)
+		& (z in D8x => ex1 w: w.0 = z)
+		& (z in D9x => ex1 w: w.1 = z)
+		);
+
+pred Dependence(var1 x, y, var2 C4x, C5x, C6x, C8x, C9x, C10x, C0x, D4y, D5y, D6y, D8y, D9y, D10y, D1y) = 
+	 ((x in C6x & y in D6y & x = y)
+		| (x in C6x & y in D10y & x = y.1)
+		| (x in C6x & y in D10y & x = y.0)
+		| (x in C10x & y in D6y & x = y.1)
+		| (x in C10x & y in D6y & x = y.0)
+		| (x in C10x & y in D10y & x = y) )
+	;
+
+var1 x, y;
+
+var2 C4x, C5x, C6x, C8x, C9x, C10x, C0x, D4y, D5y, D6y, D8y, D9y, D10y, D1y;
+
+Configuration_A(x, C4x, C5x, C6x, C8x, C9x, C10x, C0x);
+
+Configuration_B(y, D4y, D5y, D6y, D8y, D9y, D10y, D1y);
+
+Dependence(x, y, C4x, C5x, C6x, C8x, C9x, C10x, C0x, D4y, D5y, D6y, D8y, D9y, D10y, D1y);
+
+

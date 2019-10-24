@@ -1,0 +1,85 @@
+ws2s;
+
+pred Configuration_A(var1 x, var2 C3x, C4x, C5x, C7x, C8x, C9x, C11x, C12x, C13x, C15x, C16x, C17x, C0x) = 
+	(root in C0x)
+	& ~(ex1 v where v ~= root: v in C0x)
+	& (all1 u where u ~= x: (
+			(u in C11x => (u.0 in C15x | u.1 in C16x) )
+			& (u in C13x => (u.0 in C8x | u.1 in C9x) )
+			& (u in C15x => (u.0 in C11x | u.1 in C13x) )
+			& (u in C16x => (u.0 in C15x | u.1 in C16x) )
+			& (u in C0x => (u.0 in C4x | u.1 in C5x) )
+			& (u in C4x => (u.0 in C8x | u.1 in C9x) )
+			& (u in C5x => (u.0 in C15x | u.1 in C16x) )
+			& (u in C8x => (u.0 in C8x | u.1 in C9x) )
+			& (u in C9x => (u.0 in C11x | u.1 in C13x) )
+			)
+		)
+	& ((x in C11x => (x in C17x))
+		& (x in C13x => (x in C7x))
+		& (x in C15x => (x in C12x))
+		& (x in C16x => (x in C17x))
+		& (x in C0x => (x in C3x))
+		& (x in C4x => (x in C7x))
+		& (x in C5x => (x in C17x))
+		& (x in C8x => (x in C7x))
+		& (x in C9x => (x in C12x))
+		)
+	& (all1 v where v ~= x:
+		(v notin C12x & v notin C3x & v notin C17x & v notin C7x)
+		)
+	& ((x in C12x => (x notin C3x & x notin C17x & x notin C7x))
+		& (x in C3x => (x notin C12x & x notin C17x & x notin C7x))
+		& (x in C17x => (x notin C12x & x notin C3x & x notin C7x))
+		& (x in C7x => (x notin C12x & x notin C3x & x notin C17x))
+		)
+	& (all1 z where z ~= root:
+		(z in C11x => ex1 w: w.0 = z)
+		& (z in C13x => ex1 w: w.1 = z)
+		& (z in C15x => ex1 w: w.0 = z)
+		& (z in C16x => ex1 w: w.1 = z)
+		& (z in C4x => ex1 w: w.0 = z)
+		& (z in C5x => ex1 w: w.1 = z)
+		& (z in C8x => ex1 w: w.0 = z)
+		& (z in C9x => ex1 w: w.1 = z)
+		);
+
+pred Configuration_B(var1 x, var2 D19x, D20x, D21x, D1x) = 
+	(root in D1x)
+	& ~(ex1 v where v ~= root: v in D1x)
+	& (all1 u where u ~= x: (
+			(u in D19x => (u.0 in D19x | u.1 in D20x) )
+			& (u in D1x => (u.0 in D19x | u.1 in D20x) )
+			& (u in D20x => (u.0 in D19x | u.1 in D20x) )
+			)
+		)
+	& ((x in D19x => (x in D21x))
+		& (x in D1x => (x in D21x))
+		& (x in D20x => (x in D21x))
+		)
+	& (all1 v where v ~= x:
+		(v notin D21x)
+		)
+	& (all1 z where z ~= root:
+		(z in D19x => ex1 w: w.0 = z)
+		& (z in D20x => ex1 w: w.1 = z)
+		);
+
+pred Dependence(var1 x, y, var2 C3x, C4x, C5x, C7x, C8x, C9x, C11x, C12x, C13x, C15x, C16x, C17x, C0x, D19y, D20y, D21y, D1y) = 
+	 ((x in C12x & y in D21y & x = y)
+		| (x in C3x & y in D21y & x = y)
+		| (x in C17x & y in D21y & x = y)
+		| (x in C7x & y in D21y & x = y) )
+	;
+
+var1 x, y;
+
+var2 C3x, C4x, C5x, C7x, C8x, C9x, C11x, C12x, C13x, C15x, C16x, C17x, C0x, D19y, D20y, D21y, D1y;
+
+Configuration_A(x, C3x, C4x, C5x, C7x, C8x, C9x, C11x, C12x, C13x, C15x, C16x, C17x, C0x);
+
+Configuration_B(y, D19y, D20y, D21y, D1y);
+
+Dependence(x, y, C3x, C4x, C5x, C7x, C8x, C9x, C11x, C12x, C13x, C15x, C16x, C17x, C0x, D19y, D20y, D21y, D1y);
+
+
