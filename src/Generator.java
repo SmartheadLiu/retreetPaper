@@ -97,9 +97,9 @@ public class Generator {
 			writer.println();
 			genconfig("ConfigurationFused", "D", fused);
 			writer.println();
-			genordered("Ordered", "Configuration", "C", unfused);
+			genordered("Ordered", "Configuration", "C", unfused, null);
 			writer.println();
-			genordered("OrderedFused", "ConfigurationFused", "D", fused);
+			genordered("OrderedFused", "ConfigurationFused", "D", fused, null);
 			writer.println();
 			gendependence("Ordered", "C", unfused);
 			writer.println();
@@ -404,7 +404,7 @@ public class Generator {
 			Block nc = p1rblocks.get(ncid);
 			for (String otherncid : p2rnoncalls) {
 				Block othernc = p2rblocks.get(otherncid);
-				if (!otherncid.equals(ncid)) {
+				// if (!otherncid.equals(ncid)) {
 					// for each variable in the write set, find the other noncall block that is reading or writing to that variable
 					for (String v : nc.writevar) {
 						for (String writev : othernc.writevar) {
@@ -483,7 +483,7 @@ public class Generator {
 							}
 						}
 					}
-				}
+				// }
 			}
 		}
 		writer.print(getOr(ortmp, "\t\t", true));
@@ -779,7 +779,7 @@ public class Generator {
 
 	}
 
-	public void genordered(String ordername, String configname, String p, RetreetExtractor extractor) {
+	public void genordered(String ordername, String configname, String p, RetreetExtractor extractor, List<String> callslist) {
 		List<String> funcs = extractor.getFuncs();
 		Map<String, Block> rblocks = extractor.getRdcdBlocks();
 		List<String> rblocklist = extractor.getRdcdBlocklist();
@@ -879,7 +879,11 @@ public class Generator {
 			}
 			andtmp.clear();
 		}
-		for (String callid : calls) {
+		List<String> iterlist = new LinkedList<String>(calls);
+		if (callslist != null) {
+			iterlist = new LinkedList<String>(callslist);
+		}
+		for (String callid : iterlist) {
 			String funcname = rblocks.get(callid).getCallname();
 			List<String> seqfunc = sequential.get(funcname);
 			for (int i = 0; i < seqfunc.size(); i++) {
@@ -1662,7 +1666,7 @@ public class Generator {
 		writer.println();
 		gendiffordered("Ordered", func1config, func2config, "C", unfused, func1, func2);
 		writer.println();
-		genordered("OrderedFused", "ConfigurationFused", "D", fused);
+		genordered("OrderedFused", "ConfigurationFused", "D", fused, null);
 		writer.println();
 		genParaDependence("C", "C", unfused, func1, func2);
 		writer.println();
@@ -1673,6 +1677,11 @@ public class Generator {
 		writer.close();
 
 		// both x and y in the fisrt traversal
+		int index = fused.calls.size() / 2;
+		List<String> call = new LinkedList<String>(fused.calls);
+		List<String> call1 = new LinkedList<String>(call.subList(0, index));
+		List<String> call2 = new LinkedList<String>(call.subList(index, call.size()));
+
 		file = new File(filepath + filename + "_2.mona");
 		try {
 			writer = new PrintWriter(file);
@@ -1686,7 +1695,28 @@ public class Generator {
 		writer.println();
 		genfuncordered("Ordered", func1config, "C", unfused, func1);
 		writer.println();
-		genordered("OrderedFused", "ConfigurationFused", "D", fused);
+		genordered("OrderedFused", "ConfigurationFused", "D", fused, call1);
+		writer.println();
+		genParaDependence("C", "C", unfused, func1, func1);
+		writer.println();
+		genxxfuseconstr("OrderedFused", "Ordered", "C", "D", func1, func2);
+		writer.println();
+		writer.close();
+
+		file = new File(filepath + filename + "_3.mona");
+		try {
+			writer = new PrintWriter(file);
+		} catch (FileNotFoundException fnfe) {
+			System.out.println(fnfe);
+		}
+		writer.println("ws2s;\n");
+		genfuncconfig(func1config, "C", unfused, func1);
+		writer.println();
+		genconfig("ConfigurationFused", "D", fused);
+		writer.println();
+		genfuncordered("Ordered", func1config, "C", unfused, func1);
+		writer.println();
+		genordered("OrderedFused", "ConfigurationFused", "D", fused, call2);
 		writer.println();
 		genParaDependence("C", "C", unfused, func1, func1);
 		writer.println();
@@ -1695,7 +1725,7 @@ public class Generator {
 		writer.close();
 
 		// both x and y in the second traversal
-		file = new File(filepath + filename + "_3.mona");
+		file = new File(filepath + filename + "_4.mona");
 		try {
 			writer = new PrintWriter(file);
 		} catch (FileNotFoundException fnfe) {
@@ -1708,7 +1738,30 @@ public class Generator {
 		writer.println();
 		genfuncordered("Ordered", func2config, "C", unfused, func2);
 		writer.println();
-		genordered("OrderedFused", "ConfigurationFused", "D", fused);
+		genordered("OrderedFused", "ConfigurationFused", "D", fused, call1);
+		writer.println();
+		genParaDependence("C", "C", unfused, func2, func2);
+		writer.println();
+		genconvert("C", "D", getFuncblocklist(func2, unfused), fused.getRdcdBlocklist(), relation, true);
+		writer.println();
+		genyyfuseconstr("OrderedFused", "Ordered", "C", "D", func1, func2);
+		writer.println();
+		writer.close();
+
+		file = new File(filepath + filename + "_5.mona");
+		try {
+			writer = new PrintWriter(file);
+		} catch (FileNotFoundException fnfe) {
+			System.out.println(fnfe);
+		}
+		writer.println("ws2s;\n");
+		genfuncconfig(func2config, "C", unfused, func2);
+		writer.println();
+		genconfig("ConfigurationFused", "D", fused);
+		writer.println();
+		genfuncordered("Ordered", func2config, "C", unfused, func2);
+		writer.println();
+		genordered("OrderedFused", "ConfigurationFused", "D", fused, call2);
 		writer.println();
 		genParaDependence("C", "C", unfused, func2, func2);
 		writer.println();
