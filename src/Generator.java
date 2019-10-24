@@ -404,7 +404,7 @@ public class Generator {
 			Block nc = p1rblocks.get(ncid);
 			for (String otherncid : p2rnoncalls) {
 				Block othernc = p2rblocks.get(otherncid);
-				// if (!otherncid.equals(ncid)) {
+				if (!otherncid.equals(ncid)) {
 					// for each variable in the write set, find the other noncall block that is reading or writing to that variable
 					for (String v : nc.writevar) {
 						for (String writev : othernc.writevar) {
@@ -412,7 +412,9 @@ public class Generator {
 								andtmp.add(x + " in " + l(p1, ncid, x));
 								andtmp.add(y + " in " + l(p2, otherncid, y));
 								andtmp.add(x + " = " + y);
-								ortmp.add("(" +  getAnd(andtmp, "", false)  + ")");
+								if (!ortmp.contains("(" +  getAnd(andtmp, "", false)  + ")")) {
+									ortmp.add("(" +  getAnd(andtmp, "", false)  + ")");
+								}
 								andtmp.clear();
 							}
 						}
@@ -421,7 +423,9 @@ public class Generator {
 								andtmp.add(x + " in " + l(p1, ncid, x));
 								andtmp.add(y + " in " + l(p2, otherncid, y));
 								andtmp.add(x + " = " + y);
-								ortmp.add("(" +  getAnd(andtmp, "", false)  + ")");
+								if (!ortmp.contains("(" +  getAnd(andtmp, "", false)  + ")")) {
+									ortmp.add("(" +  getAnd(andtmp, "", false)  + ")");
+								}
 								andtmp.clear();
 							}
 						}
@@ -452,7 +456,9 @@ public class Generator {
 								andtmp.add(x + " in " + l(p1, ncid, x));
 								andtmp.add(y + " in " + l(p2, otherncid, y));
 								andtmp.add(x + callseq + " = " + y + othercallseq);
-								ortmp.add("(" +  getAnd(andtmp, "", false)  + ")");
+								if (!ortmp.contains("(" +  getAnd(andtmp, "", false)  + ")")) {
+									ortmp.add("(" +  getAnd(andtmp, "", false)  + ")");
+								}
 								andtmp.clear();
 							}
 						}
@@ -470,12 +476,14 @@ public class Generator {
 								andtmp.add(x + " in " + l(p1, ncid, x));
 								andtmp.add(y + " in " + l(p2, otherncid, y));
 								andtmp.add(x + callseq + " = " + y + othercallseq);
-								ortmp.add("(" +  getAnd(andtmp, "", false)  + ")");
+								if (!ortmp.contains("(" +  getAnd(andtmp, "", false)  + ")")) {
+									ortmp.add("(" +  getAnd(andtmp, "", false)  + ")");
+								}
 								andtmp.clear();
 							}
 						}
 					}
-				// }
+				}
 			}
 		}
 		writer.print(getOr(ortmp, "\t\t", true));
@@ -1305,6 +1313,322 @@ public class Generator {
 		writer.println(");");
 		writer.println();
 
+		// convert
+		writer.print("Convert(");
+		writer.print(genarglist(pu, y, f2blck, false));
+		writer.print(", ");
+		fvars = genRplist(fblck, f1ncCrrsplist);
+		writer.print(genarglist(pf, y, fvars, false));
+		writer.println(");");
+		writer.println();
+
+	}
+
+	public void genfuncordered(String ordername, String configname, String p, RetreetExtractor extractor, String funcid) {
+		List<String> funcs = new LinkedList<String>(extractor.getFuncs());
+		Map<String, Block> rblocks = new LinkedHashMap<String, Block>(extractor.getRdcdBlocks());
+		List<String> rblocklist = new LinkedList<String>(extractor.getRdcdBlocklist());
+		Set<String> calls = new HashSet<String>(extractor.getCalls());
+		Set<String> rnoncalls = new HashSet<String>(extractor.getRdcdNoncalls());
+		Map<String, List<String>> rfuncBlock = new LinkedHashMap<String, List<String>>(extractor.getRdcdFuncBlock());
+		Map<String, List<String>> sequential = extractor.getSequential();
+		List<String> ortmp = new LinkedList<String>();
+		List<String> andtmp = new LinkedList<String>();
+
+		Map<String, Set<String>> callmap = extractor.getCallMap();
+		for (String func : extractor.getFuncs()) {
+			String funcname = rblocks.get(funcid).getCallname();
+			if (!callmap.get(funcname).contains(func)) {
+				calls.removeAll(rfuncBlock.get(func));
+				rnoncalls.removeAll(rfuncBlock.get(func));
+				rblocklist.removeAll(rfuncBlock.get(func));
+				funcs.remove(func);
+				// sequential.remove(func);
+			}
+		}
+		calls.add(funcid);
+		rblocklist.add(funcid);
+
+		String x = "x";
+		String y = "y";
+
+		// first the predicate signature
+		writer.print("pred " + ordername + "(var1 " + x + ", " + y + ", var2 ");
+		writer.print(genarglist(p, x, rblocklist, false));
+		writer.print(", ");
+		writer.print(genarglist(p, y, rblocklist, false));
+		writer.println(") = ");
+
+		// the labels for x and y should not be exactly the same
+		// andtmp.add(l(p, "main", x) + " = " + l(p, "main", y));
+		for (String id : rblocklist) {
+			andtmp.add(l(p, id, x) + " = " + l(p, id, y));
+		}
+		writer.println("\t~(" + getAnd(andtmp, "", false) + ")");
+		andtmp.clear();
+
+		// labels for x and y should be valid configurations
+		writer.println("\t& " + configname + "(" + x + ", " + genarglist(p, x, rblocklist, false) + ")");
+		writer.println("\t& " + configname + "(" + y + ", " + genarglist(p, y, rblocklist, false) + ")");
+
+		// exists a node z which precede x and y in the tree, such that
+			// every node v precede z, v in labels of x <=> v in labels of y
+			// but labels of x and labels of y start to differ on z or children of z.
+		// first part: every node v precede z, v in labels of x <=> v in labels of y
+		writer.println("\t& (ex1 z: (z <= " + x + ") & (z <= " + y + ")");
+		writer.println("\t\t& (all1 v:");
+		writer.println("\t\t\t(v < z) => ");
+		writer.print("\t\t\t(\t");
+		// andtmp.add("(v in " + l(p, "main", x) + " <=> v in " + l(p, "main", y) + ")");
+		for (String id : rblocklist) {
+			andtmp.add("(v in " + l(p, id, x) + " <=> v in " + l(p, id, y) + ")");
+		}
+		writer.print(getAnd(andtmp, "\t\t\t\t", true));
+		andtmp.clear();
+		writer.println(" )");
+		writer.println("\t\t\t)");
+		// second part: but labels of x and labels of y start to differ on z or children of z.
+		writer.print("\t\t& (");
+		// for every call block
+		// find out the function which the call block actually calls
+		// get the sequential relation corresponding to the function
+		// list all possibilities
+		// List<String> seqmain = sequential.get("main");
+		// for (int i = 0; i < seqmain.size(); i++) {
+		// 	andtmp.add("(z in " + l(p, "main", x) + ")");
+		// 	andtmp.add("(z in " + l(p, "main", y) + ")");
+		// 	// get the block, check if it's a call
+		// 	Block iblock = rblocks.get(seqmain.get(i));
+		// 	if (iblock.getCallFlag()) {
+		// 		// if it is a call, get the callseq of the call, z.callseq should be in that call block
+		// 		List<String> icallseq = iblock.callseq;
+		// 		String iseq = "";
+		// 		for (int m = 1; m < icallseq.size(); m++) {
+		// 			if (icallseq.get(m).equals("left")) {
+		// 				iseq = iseq + ".0";
+		// 			} else if (icallseq.get(m).equals("right")) {
+		// 				iseq = iseq + ".1";
+		// 			}
+		// 		}
+		// 		andtmp.add("(z" + iseq + " in " + l(p, seqmain.get(i), x) + ")");
+		// 	} else {
+		// 		// if it's noncall, z should be in the noncall block
+		// 		andtmp.add("(z in " + l(p, seqmain.get(i), x) + ")");
+		// 	}
+		// 	for (int j = i + 1; j < seqmain.size(); j++) {
+		// 		Block jblock = rblocks.get(seqmain.get(j));
+		// 		if (jblock.getCallFlag()) {
+		// 			// if it is a call, get the callseq of the call, z.callseq should be in that call block
+		// 			List<String> jcallseq = jblock.callseq;
+		// 			String jseq = "";
+		// 			for (int m = 1; m < jcallseq.size(); m++) {
+		// 				if (jcallseq.get(m).equals("left")) {
+		// 					jseq = jseq + ".0";
+		// 				} else if (jcallseq.get(m).equals("right")) {
+		// 					jseq = jseq + ".1";
+		// 				}
+		// 			}
+		// 			andtmp.add("(z" + jseq + " in " + l(p, seqmain.get(j), y) + ")");
+		// 		} else {
+		// 			// if it's noncall, z should be in the noncall block
+		// 			andtmp.add("(z in " + l(p, seqmain.get(j), y) + ")");
+		// 		}
+		// 		ortmp.add("(" + getAnd(andtmp, "\t\t\t\t", true) + ")");
+		// 		andtmp.remove(andtmp.size() - 1);
+		// 	}
+		// 	andtmp.clear();
+		// }
+		for (String callid : calls) {
+			String funcname = rblocks.get(callid).getCallname();
+			List<String> seqfunc = sequential.get(funcname);
+			for (int i = 0; i < seqfunc.size(); i++) {
+				andtmp.add("(z in " + l(p, callid, x) + ")");
+				andtmp.add("(z in " + l(p, callid, y) + ")");
+				// get the block, check if it's a call
+				Block iblock = rblocks.get(seqfunc.get(i));
+				if (iblock.getCallFlag()) {
+					// if it is a call, get the callseq of the call, z.callseq should be in that call block
+					List<String> icallseq = iblock.callseq;
+					String iseq = "";
+					for (int m = 1; m < icallseq.size(); m++) {
+						if (icallseq.get(m).equals("left")) {
+							iseq = iseq + ".0";
+						} else if (icallseq.get(m).equals("right")) {
+							iseq = iseq + ".1";
+						}
+					}
+					andtmp.add("(z" + iseq + " in " + l(p, seqfunc.get(i), x) + ")");
+				} else {
+					// if it's noncall, z should be in the noncall block
+					andtmp.add("(z in " + l(p, seqfunc.get(i), x) + ")");
+				}
+				for (int j = i + 1; j < seqfunc.size(); j++) {
+					Block jblock = rblocks.get(seqfunc.get(j));
+					if (jblock.getCallFlag()) {
+						// if it is a call, get the callseq of the call, z.callseq should be in that call block
+						List<String> jcallseq = jblock.callseq;
+						String jseq = "";
+						for (int m = 1; m < jcallseq.size(); m++) {
+							if (jcallseq.get(m).equals("left")) {
+								jseq = jseq + ".0";
+							} else if (jcallseq.get(m).equals("right")) {
+								jseq = jseq + ".1";
+							}
+						}
+						andtmp.add("(z" + jseq + " in " + l(p, seqfunc.get(j), y) + ")");
+					} else {
+						// if it's noncall, z should be in the noncall block
+						andtmp.add("(z in " + l(p, seqfunc.get(j), y) + ")");
+					}
+					ortmp.add("(" + getAnd(andtmp, "\t\t\t\t", true) + ")");
+					andtmp.remove(andtmp.size() - 1);
+				}
+				andtmp.clear();
+			}
+		}
+		writer.print(getOr(ortmp, "\t\t\t", true));
+		ortmp.clear();
+		writer.println("\n\t\t\t)");
+		writer.print("\t\t)");
+
+		// ordered comes to an end
+		writer.println(";");
+
+	}
+
+	public void genxxfuseconstr(String fusedorder, String ordered, String pu, String pf, String func1, String func2) {
+		String x = "x";
+		String y = "y";
+		List<String> f1blck = getFuncblocklist(func1, unfused);
+		List<String> fblck = new LinkedList<String>(fused.rblocklist);
+		List<String> f2nclist = getFuncNCblocklist(unfused.rblocks.get(func2).getCallname(), unfused);
+
+		// declare var1 x, y first
+		writer.println("var1 " + x + ", " + y + ";");
+		writer.println();
+
+		// declare var2
+		writer.print("var2 empty_set, ");
+		writer.print(genarglist(pu, x, f1blck, true));
+		writer.print(", ");
+		writer.print(genarglist(pu, y, f1blck, true));
+		writer.println(";");
+		writer.println();
+
+		// define empty_set
+		writer.println("all1 u: ~(u in empty_set);");
+		writer.println();
+
+		// fusedordered y x
+		writer.print(fusedorder + "(" + y + ", " + x + ", ");
+		List<String> fvars = new LinkedList<String>(fblck);
+		for (int i = 0; i < fvars.size(); i++) {
+			List<String> tmplist = new LinkedList<String>();
+			tmplist.add(fvars.get(i));
+			fvars.set(i, genNCCrrspList(tmplist, relation, false).get(0));
+		}
+		fvars = genRplist(fvars, f2nclist);
+		writer.print(genarglist(pu, y, fvars, true));
+		writer.print(", ");
+		writer.print(genarglist(pu, x, fvars, true));
+		writer.println(");");
+		writer.println();
+
+		// ordered x y
+		writer.print(ordered + "(" + x + ", " + y + ", ");
+		writer.print(genarglist(pu, x, f1blck, false));
+		writer.print(", ");
+		writer.print(genarglist(pu, y, f1blck, false));
+		writer.println(");");
+		writer.println();
+
+		// dependence x y
+		writer.print("Dependence(" + x + ", " + y + ", ");
+		writer.print(genarglist(pu, x, f1blck, false));
+		writer.print(", ");
+		writer.print(genarglist(pu, y, f1blck, false));
+		writer.println(");");
+		writer.println();
+
+	}
+
+	public void genyyfuseconstr(String fusedorder, String ordered, String pu, String pf, String func1, String func2) {
+		String x = "x";
+		String y = "y";
+		List<String> f1blck = getFuncblocklist(func1, unfused);
+		List<String> f2blck = getFuncblocklist(func2, unfused);
+		List<String> fblck = new LinkedList<String>(fused.rblocklist);
+		List<String> f1nclist = getFuncNCblocklist(unfused.rblocks.get(func1).getCallname(), unfused);
+		List<String> f2nclist = getFuncNCblocklist(unfused.rblocks.get(func2).getCallname(), unfused);
+		List<String> f1ncCrrsplist = genNCCrrspList(f1nclist, relation, true);
+		List<String> f2ncCrrsplist = genNCCrrspList(f2nclist, relation, true);
+
+		// declare var1 x, y first
+		writer.println("var1 " + x + ", " + y + ";");
+		writer.println();
+
+		// declare var2
+		writer.print("var2 empty_set, ");
+		writer.print(genarglist(pu, x, f2blck, false));
+		writer.print(", ");
+		writer.print(genarglist(pu, y, f2blck, false));
+		writer.print(", ");
+		List<String> fvars = new LinkedList<String>(fblck);
+		fvars.removeAll(f1ncCrrsplist);
+		writer.print(genarglist(pf, x, fvars, true));
+		writer.print(", ");
+		writer.print(genarglist(pf, y, fvars, true));
+		writer.println(";");
+		writer.println();
+
+		// define empty_set
+		writer.println("all1 u: ~(u in empty_set);");
+		writer.println();
+
+		// fusedordered y x
+		writer.print(fusedorder + "(" + y + ", " + x + ", ");
+		fvars = genRplist(fblck, f1ncCrrsplist);
+		writer.print(genarglist(pf, y, fvars, true));
+		writer.print(", ");
+		// fvars = new LinkedList<String>(fblck);
+		// for (int i = 0; i < fvars.size(); i++) {
+		// 	List<String> tmplist = new LinkedList<String>();
+		// 	tmplist.add(fvars.get(i));
+		// 	fvars.set(i, genNCCrrspList(tmplist, relation, false).get(0));
+		// }
+		// fvars = genRplist(fvars, f2nclist);
+		// writer.print(genarglist(pu, x, fvars, true));
+		writer.print(genarglist(pf, x, fvars, true));
+		writer.println(");");
+		writer.println();
+
+
+		// ordered x y
+		writer.print(ordered + "(" + x + ", " + y + ", ");
+		writer.print(genarglist(pu, x, f2blck, false));
+		writer.print(", ");
+		writer.print(genarglist(pu, y, f2blck, false));
+		writer.println(");");
+		writer.println();
+
+		// dependence x y
+		writer.print("Dependence(" + x + ", " + y + ", ");
+		writer.print(genarglist(pu, x, f2blck, false));
+		writer.print(", ");
+		writer.print(genarglist(pu, y, f2blck, false));
+		writer.println(");");
+		writer.println();
+
+		// convert x
+		writer.print("Convert(");
+		writer.print(genarglist(pu, x, f2blck, false));
+		writer.print(", ");
+		fvars = genRplist(fblck, f1ncCrrsplist);
+		writer.print(genarglist(pf, x, fvars, false));
+		writer.println(");");
+		writer.println();
+
+		// convert y
 		writer.print("Convert(");
 		writer.print(genarglist(pu, y, f2blck, false));
 		writer.print(", ");
@@ -1360,15 +1684,39 @@ public class Generator {
 		writer.println();
 		genconfig("ConfigurationFused", "D", fused);
 		writer.println();
-		// ordered missing
+		genfuncordered("Ordered", func1config, "C", unfused, func1);
+		writer.println();
 		genordered("OrderedFused", "ConfigurationFused", "D", fused);
 		writer.println();
 		genParaDependence("C", "C", unfused, func1, func1);
 		writer.println();
-
-
+		genxxfuseconstr("OrderedFused", "Ordered", "C", "D", func1, func2);
+		writer.println();
 		writer.close();
+
 		// both x and y in the second traversal
+		file = new File(filepath + filename + "_3.mona");
+		try {
+			writer = new PrintWriter(file);
+		} catch (FileNotFoundException fnfe) {
+			System.out.println(fnfe);
+		}
+		writer.println("ws2s;\n");
+		genfuncconfig(func2config, "C", unfused, func2);
+		writer.println();
+		genconfig("ConfigurationFused", "D", fused);
+		writer.println();
+		genfuncordered("Ordered", func2config, "C", unfused, func2);
+		writer.println();
+		genordered("OrderedFused", "ConfigurationFused", "D", fused);
+		writer.println();
+		genParaDependence("C", "C", unfused, func2, func2);
+		writer.println();
+		genconvert("C", "D", getFuncblocklist(func2, unfused), fused.getRdcdBlocklist(), relation, true);
+		writer.println();
+		genyyfuseconstr("OrderedFused", "Ordered", "C", "D", func1, func2);
+		writer.println();
+		writer.close();
 
 	}
 
